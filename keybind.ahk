@@ -100,18 +100,16 @@ i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
 o::Search("https://www.etymonline.com/search?q=")
 p::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 
-h::Home
-j::PgDn
-k::Pgup
-l::End
+h::Run("https://x.com/husino93/with_replies")
+j::Run("https://x.com/489wiki")
+k::Run("https://bsky.app/profile/489wiki.bsky.social")
+l::Run("https://typingch.c4on.jp/game/index.html")
 `;::Run("https://keyx0.net/easy/")
 vkBA::Run("https://o24.works/atc/")
 
 n::Run("https://drive.google.com/drive/u/0/my-drive")
-m::Run("https://x.com/husino93/with_replies")
-,::Run("https://x.com/489wiki")
-.::Run("https://bsky.app/profile/489wiki.bsky.social")
-/::Run("https://typingch.c4on.jp/game/index.html")
+m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
+,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
 
 #HotIf GetKeyState("vk1c", "P")
 q::@
@@ -142,11 +140,11 @@ l::Right
 `;::!Tab
 vkBA::!F4
 
-n::Volume_mute
-m::Delete
-*,::Send(GetKeyState("F16", "L") ? "{Volume_Down}" : "{Volume_Up}")
-.::Browser_Home
-/::Run("C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Notepad++.lnk")
+n::Send(GetKeyState("F16", "L") ? "{Volume_Down}" : "{Volume_Up}")
+*m::Send(GetKeyState("F16", "L") ? "{Pgdn}" : "{Home}")
+*,::Send(GetKeyState("F16", "L") ? "{Pgup}" : "{End}")
+.::Volume_mute
+/::Browser_Home
 
 #HotIf GetKeyState("Space", "P")
 *q::GetKeyState("Delete", "P") ? Layer(, Prim("{F11}", "L")) : Toggle("~")
@@ -226,7 +224,7 @@ o::KeyHistory
 	Notice("ルパインアタック", 300)
 }
 
-*vk1c::global LastKey := Send("{End}{Enter}")
+*vk1c::global LastKey := Send("{Delete}")
 
 #HotIf WinExist("ahk_exe AutoHotkey64.exe")
 *w::Toggle("l", "{BS}ɫ")
