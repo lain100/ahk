@@ -36,6 +36,18 @@ Using_MPC_BE(*) => InStr(A_Clipboard, "youtu") &&
 
 Search(url) => Send("^{c}") || Sleep(100) || Run(url . A_Clipboard)
 
+Lupine_Attack(mode := 1) {
+	WinGetPos(&X, &Y, &W, &H, "A")
+	MouseGetPos(&offsetX, &offsetY)
+	MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
+	◢ := (offsetY / MY + offsetX / MX) > 1
+	◣ := (offsetY / MY - offsetX / MX) > 0
+  v := !mode * !◣ / 2 + mode * (◣ + !◣ / 2)
+  w := mode * ◣ / 2 + !mode * (!◣ + ◣ / 2)
+	MouseMove((◢ * v + !◢ * w) * MX, (!◢ * v + ◢ * w) * MY)
+	Notice("ルパインアタック", 300)
+}
+
 Notice(str, delay := 1000) => ToolTip(str) && SetTimer(ToolTip, -delay)
 
 *-::
@@ -78,7 +90,7 @@ p::w
 h::p
 j::t
 k::n
-*l::Toggle("k", "n", "k")
+*l::GetKeyState("k", "P") ? Send("n") : Layer("k")
 `;::s
 vkBA::j
 
@@ -92,7 +104,6 @@ m::d
 *Space::Layer("F16", "{Space}")
 *vk1c::Layer(, "{BackSpace}")
 *Delete::Layer("Shift")
-~RButton::KeyWait(GetHotKey(), "T0.08") ? Send("o") : ""
 
 #HotIf GetKeyState("LShift", "P")
 u::Search("https://www.google.com/search?q=")
@@ -110,6 +121,7 @@ vkBA::Run("https://o24.works/atc/")
 n::Run("https://drive.google.com/drive/u/0/my-drive")
 m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 ,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
+.::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 
 #HotIf GetKeyState("vk1c", "P")
 q::@
@@ -141,8 +153,8 @@ l::Right
 vkBA::!F4
 
 n::Send(GetKeyState("F16", "L") ? "{Volume_Down}" : "{Volume_Up}")
-*m::Send(GetKeyState("F16", "L") ? "{Pgdn}" : "{Home}")
-*,::Send(GetKeyState("F16", "L") ? "{Pgup}" : "{End}")
+*m::Send(GetKeyState("F16", "L") ? "{Home}" : "{Pgdn}")
+*,::Send(GetKeyState("F16", "L") ? "{End}" : "{Pgup}")
 .::Volume_mute
 /::Browser_Home
 
@@ -214,14 +226,10 @@ o::KeyHistory
 	Y += GetKeyState("j", "P") ? diff : (GetKeyState("k", "P") ? -diff : 0)
 	MouseMove(X, Y)
 }
-`;:: {
+*`;::Lupine_Attack(GetKeyState("Ctrl", "P"))
+*vkBA:: {
 	WinGetPos(&X, &Y, &W, &H, "A")
-	MouseGetPos(&offsetX, &offsetY)
-	MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
-	◢ := (offsetY / MY + offsetX / MX) > 1
-	◣ := (offsetY / MY - offsetX / MX) > 0
-	MouseMove((◢ / 2 + !◢ * ◣) * MX, (!◢ / 2 + ◢ * !◣) * MY)
-	Notice("ルパインアタック", 300)
+	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
 
 *vk1c::global LastKey := Send("{Delete}")
