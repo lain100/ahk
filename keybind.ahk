@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
 
-LastKey := ""
+SandS := 0, LastKey := ""
 layer(key := "", key2 := "", HotKey := GetHotKey()) {
 	global LastKey := HotKey = "vk1c" || HotKey = "vk1d" ? HotKey : ""
 	key ? Send("{Blind}{" key " Down}") : ""
@@ -101,10 +101,15 @@ m::d
 /::z
 
 *vk1d::Layer(, "{Enter}")
-*Space::Layer("F16", "{Space}")
+*Space::Layer(SandS ? "Shift" : "", "{Space}")
 *vk1c::Layer(, "{BackSpace}")
-*Delete::Layer("Shift")
-
+*Delete::{
+  KeyWait("Delete")
+  if (A_PriorKey = "Delete") {
+    global SandS := 1 - SandS
+    Notice("SandS " (SandS ? "ON" : "OFF"))
+  }
+}
 #HotIf GetKeyState("LShift", "P")
 u::Search("https://www.google.com/search?q=")
 i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
@@ -130,9 +135,9 @@ q::@
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::GetKeyState("F16", "L") ? Layer("LWin") : Arpeggio("(", "{Left}(", "f")
-*d::GetKeyState("F16", "L") ? Layer("LAlt") : Arpeggio("'", "'{Left}")
-*f::GetKeyState("F16", "L") ? Layer("LShift") : Arpeggio(")", "){Left}", "s")
+*s::GetKeyState("Space", "P") ? Layer("LWin") : Arpeggio("(", "{Left}(", "f")
+*d::GetKeyState("Space", "P") ? Layer("LAlt") : Arpeggio("'", "'{Left}")
+*f::Arpeggio(")", "){Left}", "s")
 g::&
 
 *z::Arpeggio("{{}", "{Left}{{}", "c")
@@ -142,7 +147,7 @@ v::|
 
 u::Esc
 i::Tab
-*o::Arpeggio(GetKeyState("F16", "L") ? "{vkf2}" : "{vkf2}{vkf3}", "{Esc}")
+*o::Arpeggio(GetKeyState("Space", "P") ? "{vkf2}" : "{vkf2}{vkf3}", "{Esc}")
 p::vk5d
 
 h::Left
@@ -152,53 +157,17 @@ l::Right
 `;::!Tab
 vkBA::!F4
 
-n::Send(GetKeyState("F16", "L") ? "{Volume_Down}" : "{Volume_Up}")
-*m::Send(GetKeyState("F16", "L") ? "{Home}" : "{Pgdn}")
-*,::Send(GetKeyState("F16", "L") ? "{End}" : "{Pgup}")
+*n::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
+m::Home
+,::End
 .::Volume_mute
 /::Browser_Home
-
-#HotIf GetKeyState("Space", "P")
-*q::GetKeyState("Delete", "P") ? Layer(, Prim("{F11}", "L")) : Toggle("~")
-*w::GetKeyState("Delete", "P") ?
-	Toggle(Prim("{F1}", "L"), Prim("{F12}", "L"), "q") : Toggle("1")
-*e::Toggle("2", Prim("{F2}", "L"), "Delete", "P")
-*r::Toggle("3", Prim("{F3}", "L"), "Delete", "P")
-
-*a::Toggle("0", Prim("{F10}", "L"), "Delete", "P")
-*s::Toggle("4", Prim("{F4}", "L"), "Delete", "P")
-*d::Toggle("5", Prim("{F5}", "L"), "Delete", "P")
-*f::Toggle("6", Prim("{F6}", "L"), "Delete", "P")
-g::$
-
-*z::Toggle("7", Prim("{F7}", "L"), "Delete", "P")
-*x::Toggle("8", Prim("{F8}", "L"), "Delete", "P")
-*c::Toggle("9", Prim("{F9}", "L"), "Delete", "P")
-v::.
-
-u::<
-i::=
-o::>
-p::\
-
-h::^
-j::+
-k::-
-l::*
-`;::/
-vkBA::%
-
-n::_
-m::!
-,::?
-.:::
-/::;
 
 #HotIf GetKeyState("vk1d", "P")
 *w::Click("WU")
 *e::Click("WD")
 
-*a::Send(KeyWait("r", "T0.2") ? "!^f" : "!+f") || KeyWait("x")
+*a::Send((GetKeyState("Space", "P") ? "" : "!") "{PrintScreen}")
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
@@ -233,6 +202,41 @@ o::KeyHistory
 }
 
 *vk1c::global LastKey := Send("{Delete}")
+
+#HotIf GetKeyState("Space", "P") && !SandS
+*q::Toggle("~", Prim("{F11}", "L"), "Delete", "P")
+*w::Toggle("1", Prim("{F1}", "L"), "Delete", "P")
+*e::Toggle("2", Prim("{F2}", "L"), "Delete", "P")
+*r::Toggle("3", Prim("{F3}", "L"), "Delete", "P")
+
+*a::Toggle("0", Prim("{F10}", "L"), "Delete", "P")
+*s::Toggle("4", Prim("{F4}", "L"), "Delete", "P")
+*d::Toggle("5", Prim("{F5}", "L"), "Delete", "P")
+*f::Toggle("6", Prim("{F6}", "L"), "Delete", "P")
+g::$
+
+*z::Toggle("7", Prim("{F7}", "L"), "Delete", "P")
+*x::Toggle("8", Prim("{F8}", "L"), "Delete", "P")
+*c::Toggle("9", Prim("{F9}", "L"), "Delete", "P")
+*v::Toggle(".", Prim("{F12}", "L"), "Delete", "P")
+
+u::<
+i::=
+o::>
+p::\
+
+h::^
+j::+
+k::-
+l::*
+`;::/
+vkBA::%
+
+n::_
+m::!
+,::?
+.:::
+/::;
 
 #HotIf WinExist("ahk_exe AutoHotkey64.exe")
 *w::Toggle("l", "{BS}ɫ")
