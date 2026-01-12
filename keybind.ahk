@@ -3,11 +3,11 @@
 OnClipboardChange Using_MPC_BE
 
 SandS := 0, LastKey := ""
-layer(key := "", key2 := "", HotKey := GetHotKey()) {
-	global LastKey := HotKey = "vk1c" || HotKey = "vk1d" ? HotKey : ""
-	key ? Send("{Blind}{" key " Down}") : ""
+layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := HotKey = "Space") {
+  global SandS, LastKey := HotKey = "vk1c" || HotKey = "vk1d" ? HotKey : ""
+	(isSpace && SandS) || (!isSpace && key) ? Send("{Blind}{" key " Down}") : ""
 	KeyWait(HotKey)
-	key ? Send("{Blind}{" key " Up}") : ""	
+	(isSpace && SandS) || (!isSpace && key) ? Send("{Blind}{" key " Up}") : ""	
 	HotKey := LastKey = HotKey ? "" : HotKey
 	A_PriorKey = HotKey && key2 ? Send("{Blind}" key2) : ""
 }
@@ -101,15 +101,10 @@ m::d
 /::z
 
 *vk1d::Layer(, "{Enter}")
-*Space::Layer(SandS ? "Shift" : "", "{Space}")
+*Space::Layer("Shift", "{Space}")
 *vk1c::Layer(, "{BackSpace}")
-*Delete::{
-  KeyWait("Delete")
-  if (A_PriorKey = "Delete") {
-    global SandS := 1 - SandS
-    Notice("SandS " (SandS ? "ON" : "OFF"))
-  }
-}
+*Delete::Layer(, "{vk5d}")
+
 #HotIf GetKeyState("LShift", "P")
 u::Search("https://www.google.com/search?q=")
 i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
@@ -147,21 +142,24 @@ v::|
 
 u::Esc
 i::Tab
-*o::Arpeggio(GetKeyState("Space", "P") ? "{vkf2}" : "{vkf2}{vkf3}", "{Esc}")
-p::vk5d
+*o::Arpeggio("{vkf2}" (GetKeyState("Space", "P") ? "" : "{vkf3}"), "{Esc}")
+*p::{
+  global SandS := GetKeyState("Space", "P")
+  SandS ? Send("{Shift Down}") || Notice("SandS ON") : Notice("SandS OFF")
+}
 
 h::Left
 j::Down
 k::Up
 l::Right
-`;::!Tab
-vkBA::!F4
+`;::Home
+vkBA::End
 
 *n::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
-m::Home
-,::End
-.::Volume_mute
-/::Browser_Home
+m::Volume_mute
+,::Browser_Home
+.::!Tab
+/::!F4
 
 #HotIf GetKeyState("vk1d", "P")
 *w::Click("WU")
