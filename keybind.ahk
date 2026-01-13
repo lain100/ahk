@@ -75,12 +75,12 @@ a::e
 s::i
 d::a
 f::o
-*g::Send(Prim("-", "L"))
+g::-
 
 z::x
 x::c
 c::v
-*v::Send(Prim(",", "L"))
+v::,
 
 u::r
 i::y
@@ -124,24 +124,24 @@ v::|
 
 u::Esc
 i::Tab
-*o::Arpeggio((GetKeyState("Space", "P") ? "+" : "") "{vkf2}", "{Esc}")
-*p::{
-  global SandS := GetKeyState("Space", "P")
-  Arpeggio(Prim("{vkf2}{vkf3}", "L"), "{Esc}")
-  Send(SandS ? "{Shift Down}" : "") || Notice("SandS " (SandS ? "ON" : "OFF"))
-}
+o::Delete
+p::End
 
 h::Left
 j::Down
 k::Up
 l::Right
 `;::Home
-vkBA::End
+vkBA::Browser_Home
 
-n::!Tab
-m::Delete
+*n::Arpeggio((GetKeyState("Space", "P") ? "+" : "") "{vkf2}", "{Esc}")
+*m::{
+  global SandS := GetKeyState("Space", "P")
+  Arpeggio(SandS ? "{Shift Up}{vkf2}{vkf3}{Shift Down}" : "", "{Esc}")
+  Notice("SandS " (SandS ? "ON" : "OFF"))
+}
 *,::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
-.::Browser_Home
+.::!Tab
 /::!F4
 
 #HotIf GetKeyState("vk1d", "P")
@@ -218,6 +218,11 @@ m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 ,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
 .::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 
+#HotIf GetKeyState("Space", "P")
+g::$
+
+*v::Send(Prim(".", "L"))
+
 #HotIf GetKeyState("Space", "P") && !SandS
 q::~
 w::1
@@ -229,12 +234,10 @@ a::0
 s::4
 d::5
 f::6
-g::$
 
 z::7
 x::8
 c::9
-v::.
 
 u::<
 i::=
