@@ -105,24 +105,6 @@ m::d
 *vk1c::Layer(, "{BackSpace}")
 *Delete::Layer(, "{vk5d}")
 
-#HotIf GetKeyState("LShift", "P")
-u::Search("https://www.google.com/search?q=")
-i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
-o::Search("https://www.etymonline.com/search?q=")
-p::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
-
-h::Run("https://x.com/husino93/with_replies")
-j::Run("https://x.com/489wiki")
-k::Run("https://bsky.app/profile/489wiki.bsky.social")
-l::Run("https://typingch.c4on.jp/game/index.html")
-`;::Run("https://keyx0.net/easy/")
-vkBA::Run("https://o24.works/atc/")
-
-n::Run("https://drive.google.com/drive/u/0/my-drive")
-m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
-,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
-.::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
-
 #HotIf GetKeyState("vk1c", "P")
 q::@
 *w::Arpeggio("[", "{Left}[", "r")
@@ -142,10 +124,11 @@ v::|
 
 u::Esc
 i::Tab
-*o::Arpeggio("{vkf2}" (GetKeyState("Space", "P") ? "" : "{vkf3}"), "{Esc}")
+*o::Arpeggio((GetKeyState("Space", "P") ? "+" : "") "{vkf2}", "{Esc}")
 *p::{
   global SandS := GetKeyState("Space", "P")
-  SandS ? Send("{Shift Down}") || Notice("SandS ON") : Notice("SandS OFF")
+  Arpeggio(Prim("{vkf2}{vkf3}", "L"), "{Esc}")
+  Send(SandS ? "{Shift Down}" : "") || Notice("SandS " (SandS ? "ON" : "OFF"))
 }
 
 h::Left
@@ -155,27 +138,28 @@ l::Right
 `;::Home
 vkBA::End
 
-*n::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
-m::Volume_mute
-,::Browser_Home
-.::!Tab
+n::!Tab
+*m::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
+,::Volume_mute
+.::Browser_Home
 /::!F4
 
 #HotIf GetKeyState("vk1d", "P")
 *w::Click("WU")
 *e::Click("WD")
 
-*a::Send((GetKeyState("Space", "P") ? "" : "!") "{PrintScreen}")
+*a::Send(Prim((GetKeyState("Space", "P") ? "" : "!") "{PrintScreen}", "L"))
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
 	MyGui := Gui("+AlwaysOnTop")
 	MyGui.AddMonthCal()
-	MyGui.OnEvent("Escape", (*) => MyGui.Destroy())
 	MyGui.Show()
+	SetTimer((*) => MyGui.Destroy(), 1000)
 	Send("{F13}")
 }
 x::+F14
+c::Send("+{PrintScreen}")
 
 #SuspendExempt true
 u::Reload
@@ -202,26 +186,26 @@ o::KeyHistory
 *vk1c::global LastKey := Send("{Delete}")
 
 #HotIf GetKeyState("Space", "P") && !SandS
-*q::Toggle("~", Prim("{F11}", "L"), "Delete", "P")
-*w::Toggle("1", Prim("{F1}", "L"), "Delete", "P")
-*e::Toggle("2", Prim("{F2}", "L"), "Delete", "P")
-*r::Toggle("3", Prim("{F3}", "L"), "Delete", "P")
+q::~
+w::1
+e::2
+r::3
+LShift::\
 
-*a::Toggle("0", Prim("{F10}", "L"), "Delete", "P")
-*s::Toggle("4", Prim("{F4}", "L"), "Delete", "P")
-*d::Toggle("5", Prim("{F5}", "L"), "Delete", "P")
-*f::Toggle("6", Prim("{F6}", "L"), "Delete", "P")
+a::0
+s::4
+d::5
+f::6
 g::$
 
-*z::Toggle("7", Prim("{F7}", "L"), "Delete", "P")
-*x::Toggle("8", Prim("{F8}", "L"), "Delete", "P")
-*c::Toggle("9", Prim("{F9}", "L"), "Delete", "P")
-*v::Toggle(".", Prim("{F12}", "L"), "Delete", "P")
+z::7
+x::8
+c::9
+v::.
 
 u::<
 i::=
 o::>
-p::\
 
 h::^
 j::+
@@ -235,6 +219,39 @@ m::!
 ,::?
 .:::
 /::;
+
+#HotIf GetKeyState("Delete", "P")
+q::F11
+w::F1
+e::F2
+r::F3
+
+a::F10
+s::F4
+d::F5
+f::F6
+
+LShift::F12
+z::F7
+x::F8
+c::F9
+
+u::Search("https://www.google.com/search?q=")
+i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
+o::Search("https://www.etymonline.com/search?q=")
+p::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+
+h::Run("https://x.com/husino93/with_replies")
+j::Run("https://x.com/489wiki")
+k::Run("https://bsky.app/profile/489wiki.bsky.social")
+l::Run("https://typingch.c4on.jp/game/index.html")
+`;::Run("https://keyx0.net/easy/")
+vkBA::Run("https://o24.works/atc/")
+
+n::Run("https://drive.google.com/drive/u/0/my-drive")
+m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
+,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
+.::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 
 #HotIf WinExist("ahk_exe AutoHotkey64.exe")
 *w::Toggle("l", "{BS}ɫ")
