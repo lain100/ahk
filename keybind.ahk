@@ -172,18 +172,51 @@ o::KeyHistory
 *k::
 *l:: {
 	MouseGetPos(&X, &Y)
-	diff := GetKeyState("Ctrl", "P") ? 80 : 16
+	diff := GetKeyState("LShift", "P") ? 80 : 16
 	X += GetKeyState("l", "P") ? diff : (GetKeyState("h", "P") ? -diff : 0)
 	Y += GetKeyState("j", "P") ? diff : (GetKeyState("k", "P") ? -diff : 0)
 	MouseMove(X, Y)
 }
-*`;::Lupine_Attack(GetKeyState("Ctrl", "P"))
+*`;::Lupine_Attack(GetKeyState("LShift", "P"))
 *vkBA:: {
 	WinGetPos(&X, &Y, &W, &H, "A")
 	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
 
 *vk1c::global LastKey := Send("{Delete}")
+
+#HotIf GetKeyState("Delete", "P")
+q::F11
+w::F1
+e::F2
+r::F3
+
+a::F10
+s::F4
+d::F5
+f::F6
+
+LShift::F12
+z::F7
+x::F8
+c::F9
+
+u::Search("https://www.google.com/search?q=")
+i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
+o::Search("https://www.etymonline.com/search?q=")
+p::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+
+h::Run("https://x.com/husino93/with_replies")
+j::Run("https://x.com/489wiki")
+k::Run("https://bsky.app/profile/489wiki.bsky.social")
+l::Run("https://typingch.c4on.jp/game/index.html")
+`;::Run("https://keyx0.net/easy/")
+vkBA::Run("https://o24.works/atc/")
+
+n::Run("https://drive.google.com/drive/u/0/my-drive")
+m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
+,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
+.::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 
 #HotIf GetKeyState("Space", "P") && !SandS
 q::~
@@ -219,39 +252,6 @@ m::!
 ,::?
 .:::
 /::;
-
-#HotIf GetKeyState("Delete", "P")
-q::F11
-w::F1
-e::F2
-r::F3
-
-a::F10
-s::F4
-d::F5
-f::F6
-
-LShift::F12
-z::F7
-x::F8
-c::F9
-
-u::Search("https://www.google.com/search?q=")
-i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
-o::Search("https://www.etymonline.com/search?q=")
-p::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
-
-h::Run("https://x.com/husino93/with_replies")
-j::Run("https://x.com/489wiki")
-k::Run("https://bsky.app/profile/489wiki.bsky.social")
-l::Run("https://typingch.c4on.jp/game/index.html")
-`;::Run("https://keyx0.net/easy/")
-vkBA::Run("https://o24.works/atc/")
-
-n::Run("https://drive.google.com/drive/u/0/my-drive")
-m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
-,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
-.::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 
 #HotIf WinExist("ahk_exe AutoHotkey64.exe")
 *w::Toggle("l", "{BS}ɫ")
