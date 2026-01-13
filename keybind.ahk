@@ -3,11 +3,11 @@
 OnClipboardChange Using_MPC_BE
 
 SandS := 0, LastKey := ""
-layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := HotKey = "Space") {
+layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := Hotkey = "Space") {
   global SandS, LastKey := HotKey = "vk1c" || HotKey = "vk1d" ? HotKey : ""
 	(isSpace && SandS) || (!isSpace && key) ? Send("{Blind}{" key " Down}") : ""
 	KeyWait(HotKey)
-	(isSpace && SandS) || (!isSpace && key) ? Send("{Blind}{" key " Up}") : ""	
+	(isSpace || key) ? Send("{Blind}{" key " Up}") : ""	
 	HotKey := LastKey = HotKey ? "" : HotKey
 	A_PriorKey = HotKey && key2 ? Send("{Blind}" key2) : ""
 }
@@ -75,12 +75,12 @@ a::e
 s::i
 d::a
 f::o
-g::-
+*g::Send(Prim("-", "L"))
 
 z::x
 x::c
 c::v
-v::,
+*v::Send(Prim(",", "L"))
 
 u::r
 i::y
@@ -139,8 +139,8 @@ l::Right
 vkBA::End
 
 n::!Tab
-*m::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
-,::Volume_mute
+m::Delete
+*,::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
 .::Browser_Home
 /::!F4
 
@@ -183,7 +183,7 @@ o::KeyHistory
 	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
 
-*vk1c::global LastKey := Send("{Delete}")
+*vk1c::global LastKey := Send("{vk1c}")
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
