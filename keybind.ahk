@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
 
-SandS := 0, LastKey := ""
+SandS := 0, IPA_Mode := 0, LastKey := ""
 
 Lupine_Attack(mode := 1) {
 	WinGetPos(&X, &Y, &W, &H, "A")
@@ -166,8 +166,9 @@ x::+F14
 
 #SuspendExempt true
 u::Reload
-i::Suspend(-1) || Notice("サスペンド " WithKey("OFF", "ON", A_IsSuspended))
-o::KeyHistory
+i::KeyHistory
+o::Suspend(-1) || Notice("    サスペンド " WithKey("OFF", "ON", A_IsSuspended))
+p::global IPA_Mode := Notice("    IPA " WithKey("OFF", "ON", !IPA_Mode)) || !IPA_Mode
 
 #SuspendExempt false
 *h::
@@ -254,7 +255,7 @@ m::!
 .:::
 /::;
 
-#HotIf WinExist("ahk_exe AutoHotkey64.exe")
+#HotIf IPA_Mode
 *w::Toggle("l", "{BS}ɫ")
 *e::Toggle("u", "{BS}ʊ")
 
