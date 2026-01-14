@@ -134,13 +134,16 @@ l::Right
 `;::Home
 vkBA::Browser_Home
 
-*n::Arpeggio((GetKeyState("Space", "P") ? "+" : "") "{vkf2}", "{Esc}")
-*m::{
+*n::Send("{Volume_" (GetKeyState("Space", "P") ? "Down" : "Up") "}")
+*m::Arpeggio((GetKeyState("Space", "P") ? "+" : "") "{vkf2}", "{vkf2}{vkf3}")
+  || Notice((GetHotKey(A_PriorHotKey) = "m" ? "半角" :
+    (GetKeyState("Space", "P") ? "カナ" : "かな")) " モード")
+*,::{
   global SandS := GetKeyState("Space", "P")
-  Arpeggio(SandS ? "{Shift Up}{vkf2}{vkf3}{Shift Down}" : "", "{Esc}")
-  Notice("SandS " (SandS ? "ON" : "OFF"))
+  Arpeggio(SandS ? "{Shift Down}" : "", "{vkf2}{vkf3}")
+  Notice("SandS " (SandS ? "ON" : "OFF")
+    (GetHotKey(A_PriorHotKey) = "," ? " / 半角 モード" : ""))
 }
-*,::Send(GetKeyState("Space", "P") ? "{Volume_Down}" : "{Volume_Up}")
 .::!Tab
 /::!F4
 
