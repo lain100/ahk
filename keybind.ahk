@@ -105,7 +105,12 @@ m::d
 *vk1d::Layer(, "{Enter}")
 *Space::Layer("Shift", "{Space}")
 *vk1c::Layer(, "{BackSpace}")
-*Delete::Layer(, "{Browser_Home}")
+*Delete:: {
+  KeyWait("Delete")
+  if A_PriorKey = "Delete"
+    global SandS := Send(WithKey(, "{Shift Down}", "Space"))
+        || Notice("    SandS " WithKey("OFF", "ON", !SandS)) || !SandS
+}
 
 #HotIf GetKeyState("vk1c", "P")
 q::@
@@ -137,13 +142,9 @@ l::Right
 vkBA::End
 
 *n::Send("{Volume_" WithKey("Up", "Down", "Space") "}")
-*m::Arpeggio(WithKey(, "+", "Space") "{vkf2}", Prim("{vkf2}{vkf3}", "L"))
-  || Notice("    " PriorKey(WithKey("かな", "カナ", "Space"), "半角") "モード")
-*,::{
-  global SandS := GetKeyState("Space", "P")
-  Arpeggio(WithKey(, "{Shift Down}", "Space"), Prim("{vkf2}{vkf3}", "L"))
-  Notice("    SandS " WithKey("OFF", "ON", "Space") PriorKey(, " ・ 半角モード"))
-}
+*m::Send(WithKey(, "+", "Space") "{vkf2}")
+  || Notice("    " WithKey("かな", "カナ", "Space") "モード")
+*,::Send(Prim("{vkf2}{vkf3}", "L")) || Notice("    半角モード")
 .::!Tab
 /::!F4
 
@@ -221,6 +222,7 @@ n::Run("https://drive.google.com/drive/u/0/my-drive")
 m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 ,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
 .::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
+/::Browser_Home
 
 #HotIf GetKeyState("Space", "P") && !SandS
 q::~
