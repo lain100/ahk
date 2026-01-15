@@ -13,7 +13,7 @@ Lupine_Attack(mode := 1) {
   v := !mode * !◣ / 2 + mode * (◣ + !◣ / 2)
   w := mode * ◣ / 2 + !mode * (!◣ + ◣ / 2)
 	MouseMove((◢ * v + !◢ * w) * MX, (!◢ * v + ◢ * w) * MY)
-	Notice("ルパインアタック", 300)
+	Tips("ルパインアタック", 300)
 }
 Layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := Hotkey = "Space") {
   global SandS, LastKey := WithKey(, HotKey, HotKey = "vk1c" || HotKey = "vk1d")
@@ -31,7 +31,7 @@ Prim(str, cond := "P") {
 Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) {
 	Send("{Blind}" WithKey(key, key2, trg, cond))
 	if key2 && !(trg || KeyWait(HotKey, "T0.2"))
-	  Send("{Blind}" key2) || KeyWait(HotKey)
+	  (Send("{Blind}" key2) KeyWait(HotKey))
 }
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
 	InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
@@ -46,11 +46,26 @@ WithKey(key := "", key2 := "", trg := "", cond := "P") =>
   trg && (isInteger(trg) || GetKeyState(trg, cond)) ? key2 : key
 
 Using_MPC_BE(*) => InStr(A_Clipboard, "youtu") &&
-	Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
+  Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
 
-Search(url) => Send("^{c}") || Sleep(100) || Run(url . A_Clipboard)
+Search(url) => (Send("^{c}") Sleep(100) Run(url . A_Clipboard))
 
-Notice(str, delay := 1000) => ToolTip(str) && SetTimer(ToolTip, -delay)
+Tips(str, delay := 1000) => (ToolTip(str) SetTimer(ToolTip, -delay))
+
+Notice(str, mode := 0) {
+  global SandS
+  str := mode ? str "`nSandS " WithKey("OFF", "ON", SandS) : str
+  g := Gui("+AlwaysOnTop -Caption +ToolWindow")
+  g.BackColor := "202020"
+  g.AddText("cFFFFFF x20 y20 w200 h80", str).SetFont("s11", "Segoe UI")
+  g.Show("w120 h80 NA")
+  Settimer((*) => timer(255, g), -1000)
+}
+
+timer(a, g, alpha := a - 10) {
+  Settimer((*) =>
+  (alpha > 0) ? (WinSetTransparent(alpha, g.Hwnd) timer(alpha, g)) : g.Destroy(), -30)
+}
 
 *-::
 *^::
@@ -106,10 +121,11 @@ m::d
 *Space::Layer("Shift", "{Space}")
 *vk1c::Layer(, "{BackSpace}")
 *Delete:: {
-  KeyWait("Delete")
-  if A_PriorKey = "Delete"
-    global SandS := Send(WithKey(, "{Shift Down}", "Space"))
-        || Notice("    SandS " WithKey("OFF", "ON", !SandS)) || !SandS
+  if KeyWait("Delete") && A_PriorKey = "Delete" {
+    global SandS := !SandS
+    Notice("SandS " WithKey("OFF", "ON", SandS))
+    Send(WithKey("{Shift Up}", WithKey(, "{Shift Down}", "Space"), SandS))
+  }
 }
 
 #HotIf GetKeyState("vk1c", "P")
@@ -141,13 +157,15 @@ l::Right
 `;::Home
 vkBA::End
 
-*n::Send("{Volume_" WithKey("Up", "Down", "Space") "}")
-*m::Send(WithKey(, "+", "Space") "{vkf2}")
-  || Notice("    " WithKey("かな", "カナ", "Space") "モード")
-*,::Send(Prim("{vkf2}{vkf3}", "L")) || Notice("    半角モード")
-.::!Tab
-/::!F4
+*n::(Send(Prim("{vkf2}{vkf3}", "L")) Notice("半角モード", 1))
+*m::(Send(Prim("{vkf2}", "L")) Notice("かなモード", 1))
+*,::(Send("+{vkf2}") Notice("カナモード", 1))
+*.::global IPA_Mode := Notice("IPA " WithKey("OFF", "ON", !IPA_Mode), 1) || !IPA_Mode
 
+#SuspendExempt true
+/::(Suspend(-1) Notice("サスペンド " WithKey("OFF", "ON", A_IsSuspended)))
+
+#SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
 *w::Click("WU")
 *e::Click("WD")
@@ -156,22 +174,20 @@ vkBA::End
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
-	MyGui := Gui("+AlwaysOnTop")
-	MyGui.AddMonthCal()
-	MyGui.Show()
-	SetTimer((*) => MyGui.Destroy(), 1000)
+	Cal := Gui("+AlwaysOnTop -Caption")
+	Cal.AddMonthCal()
+	Cal.Show("NA")
+	SetTimer((*) => Cal.Destroy(), -2000)
 	Send("{F13}")
 }
 x::+F14
 *c::Send("+{PrintScreen}")
 
-#SuspendExempt true
 u::Reload
 i::KeyHistory
-o::Suspend(-1) || Notice("    サスペンド " WithKey("OFF", "ON", A_IsSuspended))
-p::global IPA_Mode := Notice("    IPA " WithKey("OFF", "ON", !IPA_Mode)) || !IPA_Mode
+o::!Tab
+p::!F4
 
-#SuspendExempt false
 *h::
 *j::
 *k::
@@ -187,6 +203,10 @@ p::global IPA_Mode := Notice("    IPA " WithKey("OFF", "ON", !IPA_Mode)) || !IPA
 	WinGetPos(&X, &Y, &W, &H, "A")
 	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
+
+n::Volume_Mute
+m::Volume_Up
+,::Volume_Down
 
 *vk1c::global LastKey := Send("{vk1c}")
 
@@ -286,4 +306,4 @@ m::!
 *x::Layer("x")
 *z::Layer("z")
 
-Notice("終わったよ", 800)
+Tips("終わったよ", 800)
