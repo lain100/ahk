@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
 
-SandS := 0, IPA_Mode := 0, LastKey := ""
+SandS := 0, IPA_Mode := 0, LastKey := "", LayerGui := Gui()
 
 Lupine_Attack(mode := 1) {
 	WinGetPos(&X, &Y, &W, &H, "A")
@@ -53,19 +53,31 @@ Search(url) => (Send("^{c}") Sleep(100) Run(url . A_Clipboard))
 Tips(str, delay := 1000) => (ToolTip(str) SetTimer(ToolTip, -delay))
 
 Notice(str, mode := 0) {
-  global SandS
-  str := mode ? str "`nSandS " WithKey("OFF", "ON", SandS) : str
   g := Gui("+AlwaysOnTop -Caption +ToolWindow")
   g.BackColor := "202020"
   g.AddText("cFFFFFF x20 y20 w200 h80", str).SetFont("s11", "Segoe UI")
   g.Show("w120 h80 NA")
-  Settimer((*) => timer(255, g), -1000)
+  Settimer((*) => FadeOut(255, g), -1000)
+  mode ? UpDateStates(str) : ""
 }
 
-timer(a, g, alpha := a - 10) {
-  Settimer((*) =>
-  (alpha > 0) ? (WinSetTransparent(alpha, g.Hwnd) timer(alpha, g)) : g.Destroy(), -30)
+FadeOut(a, g, alpha := a - 10) {
+  Settimer((*) => (alpha > 0) ?
+    (WinSetTransparent(alpha, g.Hwnd) FadeOut(alpha, g)) : g.Destroy(), -30)
 }
+
+UpDateStates(str := "") {
+  global SandS, IPA_Mode, LayerGui
+  LayerGui.Destroy()
+  LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
+  LayerGui.BackColor := "202020"
+  LayerGui.AddText("cFFFFFF x20 y20 w200 h80", str
+    "`nSandS " WithKey("OFF", "ON", SandS)
+    "`nIPA " WithKey("OFF", "ON", IPA_Mode)).SetFont("s11", "Segoe UI")
+  LayerGui.Show("x1800 w120 h100 NA")
+  WinSetTransparent(128, LayerGui.Hwnd)
+}
+(LayerGui.Show() UpDateStates())
 
 *-::
 *^::
@@ -123,7 +135,7 @@ m::d
 *Delete:: {
   if KeyWait("Delete") && A_PriorKey = "Delete" {
     global SandS := !SandS
-    Notice("SandS " WithKey("OFF", "ON", SandS))
+    Notice("SandS " WithKey("OFF", "ON", SandS), 1)
     Send(WithKey("{Shift Up}", WithKey(, "{Shift Down}", "Space"), SandS))
   }
 }
@@ -157,10 +169,15 @@ l::Right
 `;::Home
 vkBA::End
 
-*n::(Send(Prim("{vkf2}{vkf3}", "L")) Notice("半角モード", 1))
-*m::(Send(Prim("{vkf2}", "L")) Notice("かなモード", 1))
-*,::(Send("+{vkf2}") Notice("カナモード", 1))
-*.::global IPA_Mode := Notice("IPA " WithKey("OFF", "ON", !IPA_Mode), 1) || !IPA_Mode
+*n::
+*m::
+*,::
+*.:: {
+  global IPA_Mode := WithKey(0, !IPA_Mode, ".")
+  Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."))
+  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",") " モード",
+    "IPA " WithKey("OFF", "ON", IPA_Mode), "."), 1)
+}
 
 #SuspendExempt true
 /::(Suspend(-1) Notice("サスペンド " WithKey("OFF", "ON", A_IsSuspended)))
