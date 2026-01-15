@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
 
-SandS := 0, IPA_Mode := 0, LastKey := "", LayerGui := Gui()
+SandS := 0, IPA_Mode := 0, LayerGui := Gui()
 
 Lupine_Attack(mode := 1) {
 	WinGetPos(&X, &Y, &W, &H, "A")
@@ -10,14 +10,16 @@ Lupine_Attack(mode := 1) {
 	MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
 	◢ := (offsetY / MY + offsetX / MX) > 1
 	◣ := (offsetY / MY - offsetX / MX) > 0
-  v := !mode * !◣ / 2 + mode * (◣ + !◣ / 2)
-  w := mode * ◣ / 2 + !mode * (!◣ + ◣ / 2)
-	MouseMove((◢ * v + !◢ * w) * MX, (!◢ * v + ◢ * w) * MY)
+  v := WithKey(!◣ / 2, ◣ + !◣ / 2, mode)
+  w := WithKey(!◣ + ◣ / 2,  ◣ / 2, mode)
+	MouseMove(WithKey(w, v, ◢) * MX, WithKey(v, w, ◢) * MY)
 	Tips("ルパインアタック", 300)
 }
-Layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := Hotkey = "Space") {
-  global SandS, LastKey := WithKey(, HotKey, HotKey = "vk1c" || HotKey = "vk1d")
-  Send(WithKey(, "{Blind}{" key " Down}", (SandS && isSpace) || (key && !isSpace)))
+Layer(key := "", key2 := "", HotKey := GetHotKey()) {
+  global SandS
+  static LastKey
+  LastKey := WithKey(WithKey(, HotKey, "vk1c"), HotKey, "vk1d")
+  Send(WithKey(, "{Blind}{" key " Down}", WithKey(key && true, SandS, "Space")))
 	KeyWait(HotKey)
 	Send(WithKey(, "{Blind}{" key " Up}", key && true))
 	HotKey := WithKey(HotKey,, LastKey = HotKey)
@@ -34,13 +36,10 @@ Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) {
 	  (Send("{Blind}" key2) KeyWait(HotKey))
 }
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
-	InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
+	WithKey(HotKey, SubStr(HotKey, 1, -3), InStr(HotKey, " up"))
 
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
-  Send("{Blind}" PriorKey(key, key2, trg))
-
-PriorKey(key := "", key2 := "", trg := GetHotKey()) =>
-  WithKey(key, key2, trg = GetHotKey(A_PriorHotKey))
+  Send("{Blind}" WithKey(key, key2, trg = GetHotKey(A_PriorHotKey)))
 
 WithKey(key := "", key2 := "", trg := "", cond := "P") =>
   trg && (isInteger(trg) || GetKeyState(trg, cond)) ? key2 : key
@@ -48,7 +47,7 @@ WithKey(key := "", key2 := "", trg := "", cond := "P") =>
 Using_MPC_BE(*) => InStr(A_Clipboard, "youtu") &&
   Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
 
-Search(url) => (Send("^{c}") Sleep(100) Run(url . A_Clipboard))
+Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(str, delay := 1000) => (ToolTip(str) SetTimer(ToolTip, -delay))
 
@@ -58,7 +57,7 @@ Notice(str, mode := 0) {
   g.AddText("cFFFFFF x20 y20 w200 h80", str).SetFont("s11", "Segoe UI")
   g.Show("w120 h80 NA")
   Settimer((*) => FadeOut(255, g), -1000)
-  mode ? UpDateStates(str) : ""
+  mode ? UpDateStates(WithKey(, str, mode = 1)) : ""
 }
 
 FadeOut(a, g, alpha := a - 10) {
@@ -66,8 +65,10 @@ FadeOut(a, g, alpha := a - 10) {
     (WinSetTransparent(alpha, g.Hwnd) FadeOut(alpha, g)) : g.Destroy(), -30)
 }
 
-UpDateStates(str := "") {
+UpDateStates(s := "") {
   global SandS, IPA_Mode, LayerGui
+  static str := "None"
+  str := WithKey(str, s, s && true)
   LayerGui.Destroy()
   LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
   LayerGui.BackColor := "202020"
@@ -135,7 +136,7 @@ m::d
 *Delete:: {
   if KeyWait("Delete") && A_PriorKey = "Delete" {
     global SandS := !SandS
-    Notice("SandS " WithKey("OFF", "ON", SandS), 1)
+    Notice("SandS " WithKey("OFF", "ON", SandS), -1)
     Send(WithKey("{Shift Up}", WithKey(, "{Shift Down}", "Space"), SandS))
   }
 }
@@ -176,7 +177,7 @@ vkBA::End
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."))
   Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",") " モード",
-    "IPA " WithKey("OFF", "ON", IPA_Mode), "."), 1)
+                "IPA " WithKey("OFF", "ON", IPA_Mode), "."), WithKey(1, -1, "."))
 }
 
 #SuspendExempt true
@@ -222,10 +223,10 @@ p::!F4
 }
 
 n::Volume_Mute
-m::Volume_Up
-,::Volume_Down
+m::Volume_Down
+,::Volume_Up
 
-*vk1c::global LastKey := Send("{vk1c}")
+*vk1c::Layer("vk1c")
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
