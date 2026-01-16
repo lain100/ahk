@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
 
-SandS := 0, IPA_Mode := 0, LayerGui := Gui()
+SandS := 0, IPA_Mode := 0
 
 Lupine_Attack(mode := 1) {
 	WinGetPos(&X, &Y, &W, &H, "A")
@@ -19,7 +19,7 @@ Lupine_Attack(mode := 1) {
 Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   global SandS
   static cord
-  cord := WithKey(WithKey(, HotKey, "vk1c"), HotKey, "vk1d")
+  cord := WithKey(, HotKey, HotKey = "vk1c" || HotKey = "vk1d")
   Send(WithKey(, "{Blind}{" key " Down}", WithKey(key && 1, SandS, HotKey = "Space")))
 	KeyWait(HotKey)
 	Send(WithKey(, "{Blind}{" key " Up}", key && 1))
@@ -53,12 +53,13 @@ Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
 Notice(msg, mode := 0) {
-  static g := Gui(), timer := (*) => mode ? g.Destroy() : FadeOut(g)
-  (SetTimer(timer, 0) g.Destroy() SetTimer(timer, -1000))
+  global a := 0
+  static g := Gui(), timer := (*) => g.Destroy()
+  (SetTimer(timer, 0) timer() SetTimer(timer, -1000))
   g := Gui("+AlwaysOnTop -Caption +ToolWindow")
   g.BackColor := "202020"
   g.AddText("cFFFFFF x20 y20 w200 h80", msg).SetFont("s11", "Segoe UI")
-  g.Show("w80 h100 NA")
+  g.Show("w90 h120 NA")
   mode ? (WinSetTransColor(g.BackColor, g.Hwnd) ShowLyr(WithKey(, msg, mode = 1))) : ""
 }
 
@@ -69,20 +70,19 @@ FadeOut(g) {
 }
 
 ShowLyr(str := "") {
-  global SandS, IPA_Mode, LayerGui
-  static msg := ""
+  global SandS, IPA_Mode
+  static LayerGui := Gui(), msg := ""
   msg := WithKey(msg, str, str && true)
   LayerGui.Destroy()
   LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
   LayerGui.BackColor := "202020"
   LayerGui.AddText("cFFFFFF x20 y20 w200 h80", msg
-    "`n" WithKey(, "SandS", SandS)
-    "`n" WithKey(, "IPA", IPA_Mode)).SetFont("s11", "Segoe UI")
-  LayerGui.Show("w80 h100 NA")
+    "`n" WithKey(, "SandS", SandS) "`n" WithKey(, "IPA", IPA_Mode)
+    "`n" WithKey(, "Suspend", A_isSuspended)).SetFont("s11", "Segoe UI")
+  LayerGui.Show("w90 h120 NA")
   WinSetTransparent(128, LayerGui.Hwnd)
   WinSetExStyle("+0x20", LayerGui.Hwnd)
 }
-(LayerGui.Show("NA") WinSetTransparent(0, LayerGui.Hwnd))
 
 *-::
 *^::
@@ -174,18 +174,20 @@ l::Right
 `;::Home
 vkBA::End
 
+#SuspendExempt true
 *n::
 *m::
 *,::
-*.:: {
+*.::
+*/::{
+  other := WithKey(0, 1, ".") || WithKey(0, 1, "/")
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
-  Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."))
-  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),
-                 WithKey(, "`n`nIPA", IPA_Mode), "."), WithKey(1, -1, "."))
+  Suspend(WithKey(0, -1, "/"))
+  Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, other))
+  Notice(WithKey(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),
+                         WithKey(, "`n`nIPA", IPA_Mode), "."),
+                 WithKey(, "`n`n`nSuspend", A_isSuspended), "/"), 1 - 2 * other)
 }
-
-#SuspendExempt true
-/::(Suspend(-1) Notice("Suspend " WithKey("OFF", "ON", A_IsSuspended)))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
@@ -229,7 +231,7 @@ n::Volume_Mute
 m::Volume_Down
 ,::Volume_Up
 
-*vk1c::(Notice("かな Mode", 1) Layer("vk1c"))
+*vk1c::(Notice("かな", 1) Layer("vk1c"))
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
