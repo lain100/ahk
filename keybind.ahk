@@ -15,26 +15,27 @@ Lupine_Attack(mode := 1) {
 	MouseMove(WithKey(w, v, ◢) * MX, WithKey(v, w, ◢) * MY)
 	Tips("ルパインアタック", 300)
 }
+
 Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   global SandS
-  static LastKey
-  LastKey := WithKey(WithKey(, HotKey, "vk1c"), HotKey, "vk1d")
-  Send(WithKey(, "{Blind}{" key " Down}", WithKey(key && true, SandS, "Space")))
+  static cord
+  cord := WithKey(WithKey(, HotKey, "vk1c"), HotKey, "vk1d")
+  Send(WithKey(, "{Blind}{" key " Down}", WithKey(key && 1, SandS, HotKey = "Space")))
 	KeyWait(HotKey)
-	Send(WithKey(, "{Blind}{" key " Up}", key && true))
-	HotKey := WithKey(HotKey,, LastKey = HotKey)
-	Send(WithKey(, "{Blind}" key2, key2 && A_PriorKey = HotKey))
+	Send(WithKey(, "{Blind}{" key " Up}", key && 1))
+	Send(WithKey(, "{Blind}" key2, key2 && A_PriorKey = WithKey(HotKey,, HotKey = cord)))
 }
+
 Prim(str, cond := "P") {
 	for key in ["Ctrl", "Shift"]
     str := WithKey(str, "{" key " Up}" str "{" key " Down}", key, cond)
 	return str
 }
-Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) {
-	Send("{Blind}" WithKey(key, key2, trg, cond))
-	if key2 && !(trg || KeyWait(HotKey, "T0.2"))
-	  (Send("{Blind}" key2) KeyWait(HotKey))
-}
+
+Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
+	(Send("{Blind}" WithKey(key, key2, trg, cond))
+    trg || KeyWait(HotKey, "T0.2") ? "" : (Send("{Blind}" key2) KeyWait(HotKey)))
+
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
 	WithKey(HotKey, SubStr(HotKey, 1, -3), InStr(HotKey, " up"))
 
@@ -309,7 +310,7 @@ m::!
 
 *u::Toggle(WithKey("r", "ɚ", "Ctrl"), Prim("{BS}" WithKey("ɹ", "ɝ", "Ctrl")))
 *o::Toggle(WithKey(WithKey(WithKey("h", "{BS}θ", "j"), "{BS}ʃ", ";"), "{BS}tʃ", "x"),
-           WithKey(WithKey("{BS}" WithKey("ɾ", "ð", "j"),"{F16}", ";"), "{F16}", "x"))
+           WithKey(WithKey("{BS}" WithKey("ɾ", "ð", "j"),, ";"),, "x"))
 
 *l::Toggle("k", "{BS}ŋk", "k")
 *vkBA::Toggle("j", "{BS}ʒ")
