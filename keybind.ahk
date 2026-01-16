@@ -53,12 +53,13 @@ Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
 Notice(msg, mode := 0) {
-  mode ? UpDateStates(WithKey(, msg, mode = 1)) : ""
+  static g := Gui(), timer := (*) => mode ? g.Destroy() : FadeOut(g)
+  (SetTimer(timer, 0) g.Destroy() SetTimer(timer, -1000))
   g := Gui("+AlwaysOnTop -Caption +ToolWindow")
   g.BackColor := "202020"
   g.AddText("cFFFFFF x20 y20 w200 h80", msg).SetFont("s11", "Segoe UI")
-  g.Show("w120 h100 NA")
-  Settimer((*) => FadeOut(g), -1000)
+  g.Show("w80 h100 NA")
+  mode ? (WinSetTransColor(g.BackColor, g.Hwnd) ShowLyr(WithKey(, msg, mode = 1))) : ""
 }
 
 FadeOut(g) {
@@ -67,20 +68,21 @@ FadeOut(g) {
   Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g)) : g.Destroy(), -15)
 }
 
-UpDateStates(str := "") {
+ShowLyr(str := "") {
   global SandS, IPA_Mode, LayerGui
-  static msg := "None"
+  static msg := ""
   msg := WithKey(msg, str, str && true)
   LayerGui.Destroy()
   LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
   LayerGui.BackColor := "202020"
   LayerGui.AddText("cFFFFFF x20 y20 w200 h80", msg
-    "`nSandS " WithKey("OFF", "ON", SandS)
-    "`nIPA " WithKey("OFF", "ON", IPA_Mode)).SetFont("s11", "Segoe UI")
-  LayerGui.Show("w120 h100 NA")
+    "`n" WithKey(, "SandS", SandS)
+    "`n" WithKey(, "IPA", IPA_Mode)).SetFont("s11", "Segoe UI")
+  LayerGui.Show("w80 h100 NA")
   WinSetTransparent(128, LayerGui.Hwnd)
+  WinSetExStyle("+0x20", LayerGui.Hwnd)
 }
-(LayerGui.Show() UpDateStates())
+(LayerGui.Show("NA") WinSetTransparent(0, LayerGui.Hwnd))
 
 *-::
 *^::
@@ -138,7 +140,7 @@ m::d
 *Delete:: {
   if KeyWait("Delete") && A_PriorKey = "Delete" {
     global SandS := !SandS
-    Notice("`nSandS " WithKey("OFF", "ON", SandS), -1)
+    Notice("`n" WithKey(, "SandS", SandS), -1)
     Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}")
   }
 }
@@ -178,8 +180,8 @@ vkBA::End
 *.:: {
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."))
-  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",") " Mode",
-      "`n`nIPA " WithKey("OFF", "ON", IPA_Mode), "."), WithKey(1, -1, "."))
+  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),
+                 WithKey(, "`n`nIPA", IPA_Mode), "."), WithKey(1, -1, "."))
 }
 
 #SuspendExempt true
