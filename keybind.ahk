@@ -50,33 +50,34 @@ Using_MPC_BE(*) => InStr(A_Clipboard, "youtu") &&
 
 Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
 
-Tips(str, delay := 1000) => (ToolTip(str) SetTimer(ToolTip, -delay))
+Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-Notice(str, mode := 0) {
+Notice(msg, mode := 0) {
+  mode ? UpDateStates(WithKey(, msg, mode = 1)) : ""
   g := Gui("+AlwaysOnTop -Caption +ToolWindow")
   g.BackColor := "202020"
-  g.AddText("cFFFFFF x20 y20 w200 h80", str).SetFont("s11", "Segoe UI")
-  g.Show("w120 h80 NA")
-  Settimer((*) => FadeOut(255, g), -1000)
-  mode ? UpDateStates(WithKey(, str, mode = 1)) : ""
+  g.AddText("cFFFFFF x20 y20 w200 h80", msg).SetFont("s11", "Segoe UI")
+  g.Show("w120 h100 NA")
+  Settimer((*) => FadeOut(g), -1000)
 }
 
-FadeOut(a, g, alpha := a - 10) {
-  Settimer((*) => (alpha > 0) ?
-    (WinSetTransparent(alpha, g.Hwnd) FadeOut(alpha, g)) : g.Destroy(), -30)
+FadeOut(g) {
+  static a := 255
+  a := WithKey(255, Max(a - 10, 0), a)
+  Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g)) : g.Destroy(), -15)
 }
 
-UpDateStates(s := "") {
+UpDateStates(str := "") {
   global SandS, IPA_Mode, LayerGui
-  static str := "None"
-  str := WithKey(str, s, s && true)
+  static msg := "None"
+  msg := WithKey(msg, str, str && true)
   LayerGui.Destroy()
   LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
   LayerGui.BackColor := "202020"
-  LayerGui.AddText("cFFFFFF x20 y20 w200 h80", str
+  LayerGui.AddText("cFFFFFF x20 y20 w200 h80", msg
     "`nSandS " WithKey("OFF", "ON", SandS)
     "`nIPA " WithKey("OFF", "ON", IPA_Mode)).SetFont("s11", "Segoe UI")
-  LayerGui.Show("x1800 w120 h100 NA")
+  LayerGui.Show("w120 h100 NA")
   WinSetTransparent(128, LayerGui.Hwnd)
 }
 (LayerGui.Show() UpDateStates())
@@ -121,7 +122,7 @@ p::w
 h::p
 j::t
 k::n
-*l::Layer(WithKey("k", "n", "k"))
+*l::Toggle("k", "n", "k")
 `;::s
 vkBA::j
 
@@ -137,24 +138,24 @@ m::d
 *Delete:: {
   if KeyWait("Delete") && A_PriorKey = "Delete" {
     global SandS := !SandS
-    Notice("SandS " WithKey("OFF", "ON", SandS), -1)
-    Send(WithKey("{Shift Up}", WithKey(, "{Shift Down}", "Space"), SandS))
+    Notice("`nSandS " WithKey("OFF", "ON", SandS), -1)
+    Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}")
   }
 }
 
 #HotIf GetKeyState("vk1c", "P")
 q::@
-*w::Arpeggio("[", "{Left}[", "r")
+w::[
 *e::Arpeggio('"', '"{Left}')
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::GetKeyState("Space", "P") ? Layer("LWin") : Arpeggio("(", "{Left}(", "f")
+*s::GetKeyState("Space", "P") ? Layer("LWin") : Send("(")
 *d::GetKeyState("Space", "P") ? Layer("LAlt") : Arpeggio("'", "'{Left}")
 *f::Arpeggio(")", "){Left}", "s")
 g::&
 
-*z::Arpeggio("{{}", "{Left}{{}", "c")
+z::`{
 *x::Arpeggio("``", "``{Left}")
 *c::Arpeggio("{}}", "{}}{Left}", "z")
 v::|
@@ -177,15 +178,16 @@ vkBA::End
 *.:: {
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."))
-  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",") " モード",
-                "IPA " WithKey("OFF", "ON", IPA_Mode), "."), WithKey(1, -1, "."))
+  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",") " Mode",
+      "`n`nIPA " WithKey("OFF", "ON", IPA_Mode), "."), WithKey(1, -1, "."))
 }
 
 #SuspendExempt true
-/::(Suspend(-1) Notice("サスペンド " WithKey("OFF", "ON", A_IsSuspended)))
+/::(Suspend(-1) Notice("Suspend " WithKey("OFF", "ON", A_IsSuspended)))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
+*q::Send("+{PrintScreen}")
 *w::Click("WU")
 *e::Click("WD")
 
@@ -193,14 +195,12 @@ vkBA::End
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
-	Cal := Gui("+AlwaysOnTop -Caption")
-	Cal.AddMonthCal()
-	Cal.Show("NA")
-	SetTimer((*) => Cal.Destroy(), -2000)
-	Send("{F13}")
+	Calender := Gui("+AlwaysOnTop -Caption")
+	Calender.AddMonthCal()
+	Calender.Show("NA")
+	(Send("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
 }
 x::+F14
-*c::Send("+{PrintScreen}")
 
 u::Reload
 i::KeyHistory
@@ -227,7 +227,7 @@ n::Volume_Mute
 m::Volume_Down
 ,::Volume_Up
 
-*vk1c::Layer("vk1c")
+*vk1c::(Notice("かな Mode", 1) Layer("vk1c"))
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
@@ -306,6 +306,7 @@ m::!
 *d::Toggle(WithKey("a", "æ", "Ctrl"), WithKey("{BS}ɑ",, "Ctrl"))
 *f::Toggle("o", "{BS}ɔ")
 *g::Toggle(WithKey("ː", "ˈ", "Ctrl"), WithKey(, Prim("{BS}ˌ"), "Ctrl"))
+
 *c::Toggle("v", "{BS}ʌ")
 
 *u::Toggle(WithKey("r", "ɚ", "Ctrl"), Prim("{BS}" WithKey("ɹ", "ɝ", "Ctrl")))
