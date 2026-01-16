@@ -59,7 +59,7 @@ Notice(msg, mode := 0) {
   g := Gui("+AlwaysOnTop -Caption +ToolWindow")
   g.BackColor := "202020"
   g.AddText("cFFFFFF x20 y20 w200 h80", msg).SetFont("s11", "Segoe UI")
-  g.Show("w90 h120 NA")
+  g.Show("w90 h100 NA")
   mode ? (WinSetTransColor(g.BackColor, g.Hwnd) ShowLyr(WithKey(, msg, mode = 1))) : ""
 }
 
@@ -77,9 +77,10 @@ ShowLyr(str := "") {
   LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
   LayerGui.BackColor := "202020"
   LayerGui.AddText("cFFFFFF x20 y20 w200 h80", msg
-    "`n" WithKey(, "SandS", SandS) "`n" WithKey(, "IPA", IPA_Mode)
-    "`n" WithKey(, "Suspend", A_isSuspended)).SetFont("s11", "Segoe UI")
-  LayerGui.Show("w90 h120 NA")
+    "`n" WithKey(, "SandS", SandS)
+    "`n" WithKey(, "IPA", IPA_Mode) WithKey(, "Suspend", A_isSuspended))
+  .SetFont("s11", "Segoe UI")
+  LayerGui.Show("w90 h100 NA")
   WinSetTransparent(128, LayerGui.Hwnd)
   WinSetExStyle("+0x20", LayerGui.Hwnd)
 }
@@ -184,9 +185,9 @@ vkBA::End
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Suspend(WithKey(0, -1, "/"))
   Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, other))
-  Notice(WithKey(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),
-                         WithKey(, "`n`nIPA", IPA_Mode), "."),
-                 WithKey(, "`n`n`nSuspend", A_isSuspended), "/"), 1 - 2 * other)
+  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),
+        "`n`n" WithKey(, "IPA", IPA_Mode) WithKey(, "Suspend", A_isSuspended), other),
+        1 - 2 * other)
 }
 
 #SuspendExempt false
