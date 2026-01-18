@@ -175,10 +175,10 @@ vkBA::End
 *.::
 */::{
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
+  other := WithKey(WithKey(, 1, "."), 1, "/")
   Suspend(WithKey(0, -1, "/"))
-  Send(Withkey(WithKey(
-    Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."),, "/"))
-  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",")))
+  Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, other))
+  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),, other))
 }
 
 #SuspendExempt false
