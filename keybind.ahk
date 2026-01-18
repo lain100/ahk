@@ -52,38 +52,32 @@ Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-Notice(msg, mode := 0) {
-  global a := 0
-  static g := Gui(), timer := (*) => g.Destroy()
-  (SetTimer(timer, 0) timer() SetTimer(timer, -1000))
+Notice(msg := "") {
   g := Gui("+AlwaysOnTop -Caption +ToolWindow")
   g.BackColor := "202020"
   g.AddText("cFFFFFF x20 y20 w200 h80", msg).SetFont("s11", "Segoe UI")
   g.Show("w90 h100 NA")
-  mode ? (WinSetTransColor(g.BackColor, g.Hwnd) ShowLyr(WithKey(, msg, mode = 1))) : ""
+  (Notice2(msg) SetTimer((*) => FadeOut(g), -1000))
 }
 
-FadeOut(g) {
-  static a := 255
-  a := WithKey(255, Max(a - 10, 0), a)
-  Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g)) : g.Destroy(), -15)
-}
-
-ShowLyr(str := "") {
+Notice2(str := "") {
   global SandS, IPA_Mode
-  static LayerGui := Gui(), msg := ""
+  static g := Gui(), msg := ""
   msg := WithKey(msg, str, str && true)
-  LayerGui.Destroy()
-  LayerGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  LayerGui.BackColor := "202020"
-  LayerGui.AddText("cFFFFFF x20 y20 w200 h80", msg
+  g.Destroy()
+  g := Gui("+AlwaysOnTop -Caption +ToolWindow")
+  g.BackColor := "202020"
+  g.AddText("cFFFFFF x20 y20 w200 h80", msg
     "`n" WithKey(, "SandS", SandS)
     "`n" WithKey(, "IPA", IPA_Mode) WithKey(, "Suspend", A_isSuspended))
   .SetFont("s11", "Segoe UI")
-  LayerGui.Show("w90 h100 NA")
-  WinSetTransparent(128, LayerGui.Hwnd)
-  WinSetExStyle("+0x20", LayerGui.Hwnd)
+  g.Show("w90 h100 NA")
+  WinSetTransColor(g.BackColor, g.Hwnd)
+  WinSetExStyle("+0x20", g.Hwnd)
 }
+
+FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
+  Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
 
 *-::
 *^::
@@ -141,8 +135,7 @@ m::d
 *Delete:: {
   if KeyWait("Delete") && A_PriorKey = "Delete" {
     global SandS := !SandS
-    Notice("`n" WithKey(, "SandS", SandS), -1)
-    Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}")
+    (Notice() Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}"))
   }
 }
 
@@ -181,13 +174,11 @@ vkBA::End
 *,::
 *.::
 */::{
-  other := WithKey(0, 1, ".") || WithKey(0, 1, "/")
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Suspend(WithKey(0, -1, "/"))
-  Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, other))
-  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),
-        "`n`n" WithKey(, "IPA", IPA_Mode) WithKey(, "Suspend", A_isSuspended), other),
-        1 - 2 * other)
+  Send(Withkey(WithKey(
+    Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, "."),, "/"))
+  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ",")))
 }
 
 #SuspendExempt false
@@ -232,7 +223,7 @@ n::Volume_Mute
 m::Volume_Down
 ,::Volume_Up
 
-*vk1c::(Notice("かな", 1) Layer("vk1c"))
+*vk1c::(Notice("かな") Layer("vk1c"))
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
