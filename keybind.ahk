@@ -52,28 +52,24 @@ Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-Notice(msg := "") {
-  g := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  g.BackColor := "202020"
-  g.AddText("cFFFFFF x20 y20 w200 h80", msg).SetFont("s11", "Segoe UI")
-  g.Show("w90 h100 NA")
-  (Notice2(msg) SetTimer((*) => FadeOut(g), -1000))
-}
-
-Notice2(str := "") {
+Notice(str := "") {
   global SandS, IPA_Mode
-  static g := Gui(), msg := ""
-  msg := WithKey(msg, str, str && true)
-  g.Destroy()
-  g := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  g.BackColor := "202020"
-  g.AddText("cFFFFFF x20 y20 w200 h80", msg
+  static txt := "", msg:= Gui()
+  txt := WithKey(txt, str, str && true)
+  box := Gui("+AlwaysOnTop -Caption +ToolWindow")
+  box.BackColor := "202020"
+  box.Show("y200 w90 h100 NA")
+  SetTimer((*) => FadeOut(box), -1000)
+  msg.Destroy()
+  msg := Gui("+AlwaysOnTop -Caption +ToolWindow")
+  msg.BackColor := "202020"
+  msg.AddText("cFFFFFF x20 y20 w200 h80", txt
     "`n" WithKey(, "SandS", SandS)
     "`n" WithKey(, "IPA", IPA_Mode) WithKey(, "Suspend", A_isSuspended))
   .SetFont("s11", "Segoe UI")
-  g.Show("w90 h100 NA")
-  WinSetTransColor(g.BackColor, g.Hwnd)
-  WinSetExStyle("+0x20", g.Hwnd)
+  msg.Show("y200 w90 h100 NA")
+  WinSetExStyle("+0x20", msg.Hwnd)
+  WinSetTransColor(msg.BackColor, msg.Hwnd)
 }
 
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
@@ -174,11 +170,11 @@ vkBA::End
 *,::
 *.::
 */::{
-  global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   other := WithKey(WithKey(, 1, "."), 1, "/")
+  global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Suspend(WithKey(0, -1, "/"))
-  Send(WithKey(Prim(WithKey(, "+", ",") "{vkf2}" WithKey(, "{vkf3}", "n")),, other))
-  Notice(WithKey(WithKey(WithKey("半角", "かな", "m"), "カナ", ","),, other))
+  Send(WithKey(WithKey("{vkf2}" WithKey(, "{vkf3}", "n"), "{vk1c}", ","),, other))
+  Notice(WithKey(WithKey("かな", "半角", "n"),, other))
 }
 
 #SuspendExempt false
@@ -222,8 +218,6 @@ p::!F4
 n::Volume_Mute
 m::Volume_Down
 ,::Volume_Up
-
-*vk1c::(Notice("かな") Layer("vk1c"))
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
