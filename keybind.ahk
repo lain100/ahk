@@ -127,15 +127,12 @@ m::d
 
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
-*Space::Layer("Shift", "{Space}")
-*vk1c::Layer(, "{BackSpace}")
-*Delete:: {
-  if KeyWait("Delete") && A_PriorKey = "Delete" {
-    global SandS := !SandS
-    (Suspend(0) Notice())
-    Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}")
-  }
+*Space::{
+  global SandS := WithKey(1,, A_PriorKey = "Space")
+  (Suspend(0) Notice() Layer(WithKey(, "Shift", SandS))) 
 }
+*vk1c::Layer(, "{BackSpace}")
+*Delete::Layer(, "{Space}")
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
