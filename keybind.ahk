@@ -125,16 +125,19 @@ m::d
 .::g
 /::z
 
+#SuspendExempt true
 *vk1d::Layer(, "{Enter}")
 *Space::Layer("Shift", "{Space}")
 *vk1c::Layer(, "{BackSpace}")
 *Delete:: {
   if KeyWait("Delete") && A_PriorKey = "Delete" {
     global SandS := !SandS
-    (Notice() Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}"))
+    (Suspend(0) Notice())
+    Send("{Shift " WithKey("Up", "Down", WithKey(, SandS, "Space")) "}")
   }
 }
 
+#SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
 q::@
 w::[
@@ -164,17 +167,18 @@ l::Right
 `;::Home
 vkBA::End
 
+,::vk1c
+, Up::Notice("かな")
+
 #SuspendExempt true
 *n::
 *m::
-*,::
 *.::
 */::{
-  other := WithKey(WithKey(, 1, "."), 1, "/")
   global IPA_Mode := WithKey(0, !IPA_Mode, ".")
   Suspend(WithKey(0, -1, "/"))
-  Send(WithKey(WithKey("{vkf2}" WithKey(, "{vkf3}", "n"), "{vk1c}", ","),, other))
-  Notice(WithKey(WithKey("かな", "半角", "n"),, other))
+  Send(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m"))
+  Notice(WithKey(WithKey(, "半角", "n"), "かな", "m"))
 }
 
 #SuspendExempt false
@@ -196,7 +200,7 @@ x::+F14
 
 u::Reload
 i::KeyHistory
-o::!Tab
+o::!Esc
 p::!F4
 
 *h::
@@ -235,22 +239,22 @@ z::F7
 x::F8
 c::F9
 
-u::Search("https://www.google.com/search?q=")
-i::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
-o::Search("https://www.etymonline.com/search?q=")
-p::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+u::Run("https://x.com/husino93/with_replies")
+i::Run("https://x.com/489wiki")
+o::Run("https://bsky.app/profile/489wiki.bsky.social")
+p::Run("https://scrapbox.io/gakkaituiho/")
 
-h::Run("https://x.com/husino93/with_replies")
-j::Run("https://x.com/489wiki")
-k::Run("https://bsky.app/profile/489wiki.bsky.social")
+h::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
+j::Search("https://www.etymonline.com/search?q=")
+k::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 l::Run("https://typingch.c4on.jp/game/index.html")
 `;::Run("https://keyx0.net/easy/")
 vkBA::Run("https://o24.works/atc/")
 
 n::Run("https://drive.google.com/drive/u/0/my-drive")
 m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
-,::Run("https://qiita.com/tomoswifty/items/be3ff39ab3361a8e9c47")
-.::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
+,::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
+.::Run("https://jmh-tms2.azurewebsites.net/schoolsystem/")
 /::Browser_Home
 
 #HotIf GetKeyState("Space", "P") && !SandS
