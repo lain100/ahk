@@ -128,7 +128,7 @@ m::d
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
 *Space::{
-  global SandS := WithKey(1,, A_PriorKey = "Space")
+  global SandS := WithKey(1, !SandS, A_PriorKey = "Space")
   (Suspend(0) Notice() Layer(WithKey(, "Shift", SandS))) 
 }
 *vk1c::Layer(, "{BackSpace}")
@@ -199,6 +199,8 @@ c::!Esc
 
 u::Reload
 i::KeyHistory
+o::Volume_Down
+p::Volume_Up
 
 *h::
 *j::
@@ -215,10 +217,6 @@ i::KeyHistory
 	WinGetPos(&X, &Y, &W, &H, "A")
 	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
-
-n::Volume_Mute
-m::Volume_Down
-,::Volume_Up
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
