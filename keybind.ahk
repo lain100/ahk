@@ -193,12 +193,12 @@ vkBA::End
 	Calender.Show("NA")
 	(Send("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
 }
+z::!F4
 x::+F14
+c::!Esc
 
 u::Reload
 i::KeyHistory
-o::!Esc
-p::!F4
 
 *h::
 *j::
