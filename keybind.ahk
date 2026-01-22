@@ -128,8 +128,9 @@ m::d
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
 *Space::{
-  global SandS := WithKey(1, !SandS, A_PriorKey = "Space")
-  (Suspend(0) Notice() Layer(WithKey(, "Shift", SandS))) 
+  preSandS := SandS
+  global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 300)
+  (Suspend(0) (preSandS != SandS && Notice()) Layer(WithKey(, "Shift", SandS)))
 }
 *vk1c::Layer(, "{BackSpace}")
 *Delete::Layer(, "{Space}")
@@ -195,7 +196,7 @@ vkBA::End
 }
 z::!F4
 x::+F14
-c::!Esc
+c::!Tab
 
 u::Reload
 i::KeyHistory
