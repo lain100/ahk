@@ -129,7 +129,7 @@ m::d
 *vk1d::Layer(, "{Enter}")
 *Space::{
   preSandS := SandS
-  global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 300)
+  global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 500)
   (Suspend(0) (preSandS != SandS && Notice()) Layer(WithKey(, "Shift", SandS)))
 }
 *vk1c::Layer(, "{BackSpace}")
@@ -208,7 +208,7 @@ p::Volume_Up
 *k::
 *l:: {
 	MouseGetPos(&X, &Y)
-	diff := 16 * WithKey(1, 5, "LShift")
+	diff := 16 * WithKey(WithKey(1, 1/4, "LCtrl"), 5, "LShift")
 	X += diff * WithKey(WithKey(0, 1, "l"), -1, "h")
 	Y += diff * WithKey(WithKey(0, 1, "j"), -1, "k")
 	MouseMove(X, Y)
@@ -240,9 +240,9 @@ i::Run("https://x.com/489wiki")
 o::Run("https://bsky.app/profile/489wiki.bsky.social")
 p::Run("https://scrapbox.io/gakkaituiho/")
 
-h::Search("https://www.oxfordlearnersdictionaries.com/definition/english/")
-j::Search("https://www.etymonline.com/search?q=")
-k::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+h::Search("https://www.google.com/search?q=")
+j::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+k::Search("https://web.archive.org/web/")
 l::Run("https://typingch.c4on.jp/game/index.html")
 `;::Run("https://keyx0.net/easy/")
 vkBA::Run("https://o24.works/atc/")
