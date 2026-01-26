@@ -1,8 +1,24 @@
 ﻿#Requires AutoHotkey v2
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
+OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0
+IME := -1, SandS := 0, IPA := 0, history := []
+
+ClipChanged(type) {
+  global history
+  text := A_Clipboard
+  if (type != 1 || text = "")
+    return
+  for idx, item in history {
+    if text = item {
+      history.RemoveAt(idx)
+      break
+    }
+  }
+  history.InsertAt(1, text)
+  Tips(history[1])
+}
 
 Lupine_Attack(mode := 1) {
 	WinGetPos(&X, &Y, &W, &H, "A")
@@ -200,7 +216,22 @@ vkBA::End
 	(SendEvent("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
 }
 z::!F4
-x::+F14
+x::{
+  global history
+  static g := Gui()
+  g.Destroy()
+  g := Gui("+AlwaysOnTop -Caption", "Clipboard History")
+  g.BackColor := "202020"
+  lv := g.AddListView("cFFFFFF BackGround202020 w500 h300 Checked -Hdr", ["Text"])
+  for item in history
+    lv.Add("", Substr(item, 1, 80))
+  lv.OnEvent("ItemCheck", (*) => { function:
+      (A_Clipboard := history[lv.GetNext()] g.Destroy())
+    })
+  g.OnEvent("Escape", (*) => g.Destroy())
+  g.Show()
+  WinSetTransParent(200, g.Hwnd)
+}
 c::!Tab
 
 u::Reload
