@@ -132,7 +132,7 @@ m::d
   preSandS := SandS
   global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 500)
   (preSandS = SandS ? "" : (Suspend(0) Notice()))
-  Layer(WithKey(, "Shift", SandS), WithKey("{Space}",, SandS))
+  Layer(WithKey(, "Shift", SandS), "{Space}")
 }
 *vk1c::Layer(, "{BackSpace}")
 *Delete::(Layer(, "{vk1c}") (A_PriorKey = "Delete" ? Notice("かな") : ""))
