@@ -16,14 +16,15 @@ Lupine_Attack(mode := 1) {
 	Tips("ルパインアタック", 300)
 }
 
-Layer(key := "", key2 := "", HotKey := GetHotKey()) {
+Layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := HotKey = "Space") {
   global SandS
   static cord
   cord := WithKey(, HotKey, HotKey = "vk1c" || HotKey = "vk1d")
-  Send(WithKey(, "{Blind}{" key " Down}", WithKey(key && 1, SandS, HotKey = "Space")))
+  SendEvent(WithKey(, "{Blind}{" key " Down}", WithKey(key && 1, SandS, isSpace)))
 	KeyWait(HotKey)
-	Send(WithKey(, "{Blind}{" key " Up}", key && 1))
-	Send(WithKey(, "{Blind}" key2, key2 && A_PriorKey = WithKey(HotKey,, HotKey = cord)))
+	SendEvent(WithKey(, "{Blind}{" key " Up}", key && 1))
+  HotKey := WithKey(HotKey,, HotKey = cord)
+	SendEvent(WithKey(, "{Blind}" key2, key2 && A_PriorKey = HotKey))
 }
 
 Prim(str, cond := "P") {
@@ -33,14 +34,14 @@ Prim(str, cond := "P") {
 }
 
 Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
-	(Send("{Blind}" WithKey(key, key2, trg, cond))
-    trg || KeyWait(HotKey, "T0.2") ? "" : (Send("{Blind}" key2) KeyWait(HotKey)))
+	(SendEvent("{Blind}" WithKey(key, key2, trg, cond))
+    trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
 
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
 	WithKey(HotKey, SubStr(HotKey, 1, -3), InStr(HotKey, " up"))
 
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
-  Send("{Blind}" WithKey(key, key2, trg = GetHotKey(A_PriorHotKey)))
+  SendEvent("{Blind}" WithKey(key, key2, trg = GetHotKey(A_PriorHotKey)))
 
 WithKey(key := "", key2 := "", trg := "", cond := "P") =>
   trg && (isInteger(trg) || GetKeyState(trg, cond)) ? key2 : key
@@ -48,7 +49,7 @@ WithKey(key := "", key2 := "", trg := "", cond := "P") =>
 Using_MPC_BE(*) => InStr(A_Clipboard, "youtu") &&
   Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
 
-Search(url) => (Send("^{c}") Sleep(100) Run(url A_Clipboard))
+Search(url) => (SendEvent("^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
@@ -130,10 +131,11 @@ m::d
 *Space::{
   preSandS := SandS
   global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 500)
-  (Suspend(0) (preSandS != SandS && Notice()) Layer(WithKey(, "Shift", SandS)))
+  (preSandS = SandS ? "" : (Suspend(0) Notice()))
+  Layer(WithKey(, "Shift", SandS), WithKey("{Space}",, SandS))
 }
 *vk1c::Layer(, "{BackSpace}")
-*Delete::Layer(, "{Space}")
+*Delete::(Layer(, "{vk1c}") (A_PriorKey = "Delete" ? Notice("かな") : ""))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
@@ -143,7 +145,7 @@ w::[
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::GetKeyState("Space", "P") ? Layer("LWin") : Send("(")
+*s::GetKeyState("Space", "P") ? Layer("LWin") : SendEvent("(")
 *d::GetKeyState("Space", "P") ? Layer("LAlt") : Arpeggio("'", "'{Left}")
 *f::Arpeggio(")", "){Left}", "s")
 g::&
@@ -165,34 +167,32 @@ l::Right
 `;::Home
 vkBA::End
 
-,::vk1c
-, Up::Notice("かな")
-
 #SuspendExempt true
 *n::
 *m::
-*.::
-*/::{
-  global IPA_Mode := WithKey(0, !IPA_Mode, ".")
-  Suspend(WithKey(0, -1, "/"))
-  Send(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m"))
+*,::
+*.::{
+  global IPA_Mode := WithKey(0, !IPA_Mode, ",")
+  Suspend(WithKey(0, -1, "."))
+  SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m"))
   Notice(WithKey(WithKey(, "半角", "n"), "かな", "m"))
 }
+*/::Browser_Home
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
-*q::Send("+{PrintScreen}")
+*q::SendEvent("+{PrintScreen}")
 *w::Click("WU")
 *e::Click("WD")
 
-*a::Send(Prim(WithKey("!",, "Space") "{PrintScreen}", "L"))
+*a::SendEvent(Prim(WithKey("!",, "Space") "{PrintScreen}", "L"))
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
 	Calender := Gui("+AlwaysOnTop -Caption")
 	Calender.AddMonthCal()
 	Calender.Show("NA")
-	(Send("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
+	(SendEvent("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
 }
 z::!F4
 x::+F14
@@ -251,7 +251,6 @@ n::Run("https://drive.google.com/drive/u/0/my-drive")
 m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 ,::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 .::Run("https://jmh-tms2.azurewebsites.net/schoolsystem/")
-/::Browser_Home
 
 #HotIf GetKeyState("Space", "P") && !SandS
 q::~
