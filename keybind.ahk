@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange Using_MPC_BE
 
-SandS := 0, IPA_Mode := 0
+IME := -1, SandS := 0, IPA := 0
 
 Lupine_Attack(mode := 1) {
 	WinGetPos(&X, &Y, &W, &H, "A")
@@ -53,7 +53,7 @@ Search(url) => (SendEvent("^{c}") Sleep(100) Run(url A_Clipboard))
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
 Notice(str := "") {
-  global SandS, IPA_Mode
+  global SandS, IPA
   static txt := "", msg:= Gui()
   txt := WithKey(txt, str, str && true)
   box := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -65,7 +65,7 @@ Notice(str := "") {
   msg.BackColor := "202020"
   msg.AddText("cFFFFFF x20 y20 w200 h80", txt
     "`n" WithKey(, "SandS", SandS)
-    "`n" WithKey(, "IPA", IPA_Mode) WithKey(, "Suspend", A_isSuspended))
+    "`n" WithKey(, "IPA", IPA) WithKey(, "Suspend", A_isSuspended))
   .SetFont("s11", "Segoe UI")
   msg.Show("y200 w90 h100 NA")
   WinSetExStyle("+0x20", msg.Hwnd)
@@ -127,14 +127,20 @@ m::d
 
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
+*vk1c::Layer(, "{BackSpace}")
 *Space::{
-  preSandS := SandS
+  preSandS := SandS, preSus := A_isSuspended
   global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 500)
-  (preSandS = SandS ? "" : (Suspend(0) Notice()))
+  (Suspend(0) preSandS = SandS && preSus = A_isSuspended ? "" : Notice())
   Layer(WithKey(, "Shift", SandS), "{Space}")
 }
-*vk1c::Layer(, "{BackSpace}")
-*Delete::(Layer(, "{vk1c}") (A_PriorKey = "Delete" ? Notice("かな") : ""))
+*Delete::{
+  Layer(, "{vk1c}")
+  if A_PriorKey = "Delete" && !IME {
+    global IME := 1
+    Notice("かな")
+  }
+}
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
@@ -171,10 +177,12 @@ vkBA::End
 *m::
 *,::
 *.::{
-  global IPA_Mode := WithKey(0, !IPA_Mode, ",")
+  preIME := IME, preIPA := IPA, preSus := A_isSuspended
+  msg := WithKey(WithKey(, "半角", "n"), "かな", "m")
+  global IME := WithKey(WithKey(IME, 0, "n"), 1, "m"), IPA := WithKey(0, !IPA, ",")
   Suspend(WithKey(0, -1, "."))
   SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m"))
-  Notice(WithKey(WithKey(, "半角", "n"), "かな", "m"))
+  preIME = IME && preIPA = IPA && preSus = A_isSuspended ? "" : Notice(msg)
 }
 */::Browser_Home
 
@@ -284,7 +292,7 @@ m::!
 .:::
 /::;
 
-#HotIf IPA_Mode
+#HotIf IPA
 *w::Toggle("l", "{BS}ɫ")
 *e::Toggle("u", "{BS}ʊ")
 
