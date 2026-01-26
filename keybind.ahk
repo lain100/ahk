@@ -16,11 +16,10 @@ Lupine_Attack(mode := 1) {
 	Tips("ルパインアタック", 300)
 }
 
-Layer(key := "", key2 := "", HotKey := GetHotKey(), isSpace := HotKey = "Space") {
-  global SandS
+Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   static cord
   cord := WithKey(, HotKey, HotKey = "vk1c" || HotKey = "vk1d")
-  SendEvent(WithKey(, "{Blind}{" key " Down}", WithKey(key && 1, SandS, isSpace)))
+  SendEvent(WithKey(, "{Blind}{" key " Down}", key && 1))
 	KeyWait(HotKey)
 	SendEvent(WithKey(, "{Blind}{" key " Up}", key && 1))
   HotKey := WithKey(HotKey,, HotKey = cord)
