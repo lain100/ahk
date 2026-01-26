@@ -136,10 +136,8 @@ m::d
 }
 *Delete::{
   Layer(, "{vk1c}")
-  if A_PriorKey = "Delete" && !IME {
+  if A_PriorKey = "Delete" && !(IME = 1 || Notice("かな"))
     global IME := 1
-    Notice("かな")
-  }
 }
 
 #SuspendExempt false
