@@ -3,13 +3,23 @@
 OnClipboardChange Using_MPC_BE
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, history := []
+IME := -1, SandS := 0, IPA := 0, history := [], path := A_ScriptDir "\clip_history.txt"
+init_history()
+
+init_history(str := "") {
+  for line in StrSplit(FileRead(path), "`n", "`r") {
+    if line = "" {
+      if str
+        history.InsertAt(1, Base64Decode(str))
+      str := ""
+    } else
+      str := str line
+  }
+}
 
 ClipChanged(type) {
-  global history
+  global history, str
   text := A_Clipboard
-  encoded := Base64Encode(text)
-  path := "C:\Users\lain2_lmpkaur\OneDrive\デスクトップ\Clipboard.txt"
   if (type != 1 || text = "")
     return
   for idx, item in history {
@@ -18,9 +28,22 @@ ClipChanged(type) {
       break
     }
   }
-  history.Push(text)
-  FileAppend(encoded "`n", path, "UTF-8")
-  Tips(Base64Decode(encoded))
+  history.InsertAt(1, text)
+  if CheckDuplicate(text)
+    FileAppend(Base64Encode(text) "`n", path, "UTF-8")
+  tips(text)
+}
+
+CheckDuplicate(text, str := "") {
+  for line in StrSplit(FileRead(path), "`n", "`r") {
+    if line = "" {
+      if Base64Decode(str) = text
+        return false
+      str := ""
+    } else
+      str := str line
+  }
+  return true
 }
 
 Base64Encode(str) {
@@ -95,7 +118,7 @@ Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
 WithKey(key := "", key2 := "", trg := "", cond := "P") =>
   trg && (isInteger(trg) || GetKeyState(trg, cond)) ? key2 : key
 
-Using_MPC_BE(*) => InStr(A_Clipboard, "youtu") &&
+Using_MPC_BE(*) => (Substr(A_Clipboard, 1, 17) = "https://www.youtu") &&
   Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
 
 Search(url) => (SendEvent("^{c}") Sleep(100) Run(url A_Clipboard))
@@ -254,7 +277,7 @@ x::{
   global history
   static g := Gui()
   g.Destroy()
-  g := Gui("+AlwaysOnTop -Caption", "Clipboard History")
+  g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
   lv := g.AddListView("cFFFFFF BackGround202020 w500 h300 Checked -Hdr", ["Text"])
   for item in history
