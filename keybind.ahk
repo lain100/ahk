@@ -8,6 +8,8 @@ IME := -1, SandS := 0, IPA := 0, history := []
 ClipChanged(type) {
   global history
   text := A_Clipboard
+  encoded := Base64Encode(text)
+  path := "C:\Users\lain2_lmpkaur\OneDrive\デスクトップ\Clipboard.txt"
   if (type != 1 || text = "")
     return
   for idx, item in history {
@@ -16,8 +18,40 @@ ClipChanged(type) {
       break
     }
   }
-  history.InsertAt(1, text)
-  Tips(history[1])
+  history.Push(text)
+  FileAppend(encoded "`n", path, "UTF-8")
+  Tips(Base64Decode(encoded))
+}
+
+Base64Encode(str) {
+  bin := Buffer(StrPut(str, "UTF-8"))
+  StrPut(str, bin, "UTF-8")
+  return CryptBinaryToString(bin)
+}
+
+Base64Decode(b64) {
+  bin := CryptStringToBinary(b64)
+  return StrGet(bin, "UTF-8")
+}
+
+CryptBinaryToString(buf) {
+  size := 0
+  DllCall("Crypt32.dll\CryptBinaryToStringW", "Ptr", buf.Ptr, "UInt",
+  buf.Size, "UInt", 1, "Ptr", 0, "UInt*", &size)
+  out := Buffer(size * 2)
+  DllCall("Crypt32.dll\CryptBinaryToStringW", "Ptr", buf.Ptr, "UInt",
+  buf.Size, "UInt", 1, "Ptr", out.Ptr, "UInt*", &size)
+  return StrGet(out)
+}
+
+CryptStringToBinary(str) {
+  size := 0
+  DllCall("Crypt32.dll\CryptStringToBinaryW", "Str", str, "UInt", 0, "UInt", 1,
+  "Ptr", 0, "UInt*", &size, "Ptr", 0, "Ptr", 0)
+  buf := Buffer(size)
+  DllCall("Crypt32.dll\CryptStringToBinaryW", "Str", str, "UInt", 0, "UInt", 1,
+  "Ptr", buf.Ptr, "UInt*", &size, "Ptr", 0, "Ptr", 0)
+  return buf
 }
 
 Lupine_Attack(mode := 1) {
