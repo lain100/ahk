@@ -4,9 +4,9 @@ OnClipboardChange Using_MPC_BE
 OnClipboardChange ClipChanged
 
 IME := -1, SandS := 0, IPA := 0, history := [], path := A_ScriptDir "\clip_history.txt"
-init_history()
+InitClipHistory()
 
-init_history(str := "") {
+InitClipHistory(str := "") {
   for line in StrSplit(FileRead(path), "`n", "`r") {
     if line = "" {
       if str
@@ -18,7 +18,7 @@ init_history(str := "") {
 }
 
 ClipChanged(type) {
-  global history, str
+  global history
   text := A_Clipboard
   if (type != 1 || text = "")
     return
@@ -31,7 +31,7 @@ ClipChanged(type) {
   history.InsertAt(1, text)
   if CheckDuplicate(text)
     FileAppend(Base64Encode(text) "`n", path, "UTF-8")
-  tips(text)
+  tips("コピーしたよ")
 }
 
 CheckDuplicate(text, str := "") {
@@ -281,11 +281,10 @@ x::{
   g.BackColor := "202020"
   lv := g.AddListView("cFFFFFF BackGround202020 w500 h300 Checked -Hdr", ["Text"])
   for item in history
-    lv.Add("", Substr(item, 1, 80))
-  lv.OnEvent("ItemCheck", (*) => { function:
-      (A_Clipboard := history[lv.GetNext()] g.Destroy())
-    })
-  g.OnEvent("Escape", (*) => g.Destroy())
+    lv.Add("", item)
+  lv.OnEvent("ItemCheck", (*) => (A_Clipboard := history[lv.GetNext()] g.Destroy()))
+  lv.OnEvent("ItemFocus", (*) => tooltip(history[lv.GetNext()]))
+  g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
   g.Show()
   WinSetTransParent(200, g.Hwnd)
 }
