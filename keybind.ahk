@@ -3,35 +3,19 @@
 OnClipboardChange Using_MPC_BE
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, history := [], path := A_ScriptDir "\clip_history.txt"
+IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := []
+path := A_ScriptDir "\clip_history.txt"
 InitClipHistory()
 
 InitClipHistory(str := "") {
   for line in StrSplit(FileRead(path), "`n", "`r") {
     if line = "" {
       if str
-        history.InsertAt(1, Base64Decode(str))
+        ClipHistory.InsertAt(1, Base64Decode(str))
       str := ""
     } else
       str := str line
   }
-}
-
-ClipChanged(type) {
-  global history
-  text := A_Clipboard
-  if (type != 1 || text = "")
-    return
-  for idx, item in history {
-    if text = item {
-      history.RemoveAt(idx)
-      break
-    }
-  }
-  history.InsertAt(1, text)
-  if CheckDuplicate(text)
-    FileAppend(Base64Encode(text) "`n", path, "UTF-8")
-  tips("コピーしたよ")
 }
 
 CheckDuplicate(text, str := "") {
@@ -44,6 +28,34 @@ CheckDuplicate(text, str := "") {
       str := str line
   }
   return true
+}
+
+ClipChanged(type) {
+  global ClipHistory
+  text := A_Clipboard
+  if (type != 1 || text = "")
+    return
+  for idx, item in ClipHistory {
+    if text = item {
+      ClipHistory.RemoveAt(idx)
+      break
+    }
+  }
+  ClipHistory.InsertAt(1, text)
+  if CheckDuplicate(text)
+    FileAppend(Base64Encode(text) "`n", path, "UTF-8")
+  tips("コピーしたよ")
+}
+
+ApplyFilter(lv, keyword := "") {
+  global ClipHistory, Filtered := []
+  lv.Delete()
+  for item in ClipHistory {
+    if keyword = "" || Instr(item, keyword) {
+      Filtered.Push(item)
+      lv.Add("", item)
+    }
+  }
 }
 
 Base64Encode(str) {
@@ -106,8 +118,8 @@ Prim(str, cond := "P") {
 }
 
 Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
-	(SendEvent("{Blind}" WithKey(key, key2, trg, cond))
-    trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
+( SendEvent("{Blind}" WithKey(key, key2, trg, cond))
+  trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
 
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
 	WithKey(HotKey, SubStr(HotKey, 1, -3), InStr(HotKey, " up"))
@@ -274,17 +286,19 @@ vkBA::End
 }
 z::!F4
 x::{
-  global history
+  global ClipHistory, Filtered
   static g := Gui()
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
   lv := g.AddListView("cFFFFFF BackGround202020 w500 h300 Checked -Hdr", ["Text"])
-  for item in history
-    lv.Add("", item)
-  lv.OnEvent("ItemCheck", (*) => (A_Clipboard := history[lv.GetNext()] g.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => tooltip(history[lv.GetNext()]))
+  filterEdit := g.AddEdit("w200 vFilter")
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
+  lv.OnEvent("ItemCheck", (*) =>
+    (A_Clipboard := Filtered[lv.GetNext()] g.Destroy()))
+  lv.OnEvent("ItemFocus", (*) => tooltip(Filtered[lv.GetNext()]))
+  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.value))
+  ApplyFilter(lv)
   g.Show()
   WinSetTransParent(200, g.Hwnd)
 }
