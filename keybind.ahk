@@ -3,9 +3,8 @@
 OnClipboardChange Using_MPC_BE
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := []
+IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := [], Label := ""
 path := A_ScriptDir "\clip_history.txt"
-InitClipHistory()
 
 InitClipHistory(str := "") {
   for line in StrSplit(FileRead(path), "`n", "`r") {
@@ -17,6 +16,7 @@ InitClipHistory(str := "") {
       str := str line
   }
 }
+InitClipHistory()
 
 CheckDuplicate(text, str := "") {
   for line in StrSplit(FileRead(path), "`n", "`r") {
@@ -137,24 +137,24 @@ Search(url) => (SendEvent("^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-Notice(str := "") {
-  global SandS, IPA
-  static txt := "", msg:= Gui()
-  txt := WithKey(txt, str, str && true)
-  box := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  box.BackColor := "202020"
-  box.Show("y200 w90 h100 NA")
-  SetTimer((*) => FadeOut(box), -1000)
-  msg.Destroy()
-  msg := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  msg.BackColor := "202020"
-  msg.AddText("cFFFFFF x20 y20 w200 h80", txt
-    "`n" WithKey(, "SandS", SandS)
-    "`n" WithKey(, "IPA", IPA) WithKey(, "Suspend", A_isSuspended))
-  .SetFont("s11", "Segoe UI")
-  msg.Show("y200 w90 h100 NA")
-  WinSetExStyle("+0x20", msg.Hwnd)
-  WinSetTransColor(msg.BackColor, msg.Hwnd)
+InitMode() {
+  Box := Gui("+AlwaysOnTop -Caption +ToolWindow")
+  global Label := Box.AddText("cFFFFFF x20 y20 w200 h80")
+  Label.SetFont("s11", "Segoe UI")
+  Box.BackColor := "202020"
+  Box.Show("y200 w90 h100 NA")
+  WinSetExStyle("+0x20", Box.Hwnd)
+  WinSetTransParent(128, Box.Hwnd)
+}
+InitMode()
+
+ModeChange(mode := -1, bool := 1) {
+  global IME := mode = 0 ? bool : IME,
+       SandS := mode = 1 ? bool : SandS,
+         IPA := mode = 2 ? bool : IPA, Label
+  Label.Text := ( (IME = -1 ? "" : (IME ? "かな" : "英字")) "`n"
+                  (SandS ? "SandS" : "") "`n"
+                  (A_isSuspended ? "Suspend": (IPA ? "IPA" : "")))
 }
 
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
@@ -175,7 +175,8 @@ FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
 *LShift::
 *LAlt::
 *RAlt::
-*LWin::return
+*LWin::
+*Delete::return
 
 w::l
 e::u
@@ -213,17 +214,8 @@ m::d
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
 *vk1c::Layer(, "{BackSpace}")
-*Space::{
-  preSandS := SandS, preSus := A_isSuspended
-  global SandS := WithKey(1,, A_PriorKey = "Space" && A_TimeSincePriorHotkey <= 500)
-  (Suspend(0) preSandS = SandS && preSus = A_isSuspended ? "" : Notice())
-  Layer(WithKey(, "Shift", SandS), "{Space}")
-}
-*Delete::{
-  Layer(, "{vk1c}")
-  if A_PriorKey = "Delete" && !(IME = 1 || Notice("かな"))
-    global IME := 1
-}
+*Space::Layer(SandS ? "Shift" : "", "{Space}")
+*Delete Up::(Suspend(0) ModeChange(1, A_PriorKey = "Delete" ? !SandS : SandS))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
@@ -259,14 +251,9 @@ vkBA::End
 *n::
 *m::
 *,::
-*.::{
-  preIME := IME, preIPA := IPA, preSus := A_isSuspended
-  msg := WithKey(WithKey(, "半角", "n"), "かな", "m")
-  global IME := WithKey(WithKey(IME, 0, "n"), 1, "m"), IPA := WithKey(0, !IPA, ",")
-  Suspend(WithKey(0, -1, "."))
-  SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m"))
-  preIME = IME && preIPA = IPA && preSus = A_isSuspended ? "" : Notice(msg)
-}
+*.::( ModeChange(0, WithKey(WithKey(IME, 0, "n"), 1, "m"))
+      Suspend(WithKey(0, -1, ".")) ModeChange(2, WithKey(0, !IPA, ","))
+      SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m")))
 */::Browser_Home
 
 #SuspendExempt false
