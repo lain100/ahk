@@ -54,6 +54,8 @@ ApplyFilter(lv, keyword := "") {
     if keyword = "" || Instr(item, keyword) {
       Filtered.Push(item)
       lv.Add("", item)
+      if Filtered.Length = 30
+        break
     }
   }
 }
@@ -103,12 +105,10 @@ Lupine_Attack(mode := 1) {
 
 Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   static cord
-  cord := WithKey(, HotKey, HotKey = "vk1c" || HotKey = "vk1d")
-  SendEvent(WithKey(, "{Blind}{" key " Down}", key && 1))
-	KeyWait(HotKey)
-	SendEvent(WithKey(, "{Blind}{" key " Up}", key && 1))
-  HotKey := WithKey(HotKey,, HotKey = cord)
-	SendEvent(WithKey(, "{Blind}" key2, key2 && A_PriorKey = HotKey))
+  cord := HotKey = "vk1c" || HotKey = "vk1d" ? HotKey : ""
+  ( SendEvent(key ? "{Blind}{" key " Down}" : "") KeyWait(HotKey)
+    SendEvent(key ? "{Blind}{" key " Up}"   : ""))
+	SendEvent(key2 && A_PriorKey = (HotKey = cord ? "" : HotKey) ? "{Blind}" key2 : "")
 }
 
 Prim(str, cond := "P") {
@@ -148,7 +148,7 @@ InitMode() {
 }
 InitMode()
 
-ModeChange(mode := -1, bool := 1) {
+ModeChange(mode, bool) {
   global IME := mode = 0 ? bool : IME,
        SandS := mode = 1 ? bool : SandS,
          IPA := mode = 2 ? bool : IPA, Label
@@ -214,8 +214,8 @@ m::d
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
 *vk1c::Layer(, "{BackSpace}")
-*Space::Layer(SandS ? "Shift" : "", "{Space}")
-*Delete Up::(Suspend(0) ModeChange(1, A_PriorKey = "Delete" ? !SandS : SandS))
+*Space::(ModeChange(1, 1) Layer("Shift", "{Space}"))
+*Delete Up::(A_PriorKey = "Delete" ? (SendEvent("{Shift Up}") ModeChange(1, 0)) : "")
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
@@ -278,11 +278,10 @@ x::{
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
-  lv := g.AddListView("cFFFFFF BackGround202020 w500 h300 Checked -Hdr", ["Text"])
+  lv := g.AddListView("cFFFFFF BackGround202020 w400 h500 Checked -Hdr", ["Text"])
   filterEdit := g.AddEdit("w200 vFilter")
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
-  lv.OnEvent("ItemCheck", (*) =>
-    (A_Clipboard := Filtered[lv.GetNext()] g.Destroy()))
+  lv.OnEvent("ItemCheck", (*) => (A_Clipboard := Filtered[lv.GetNext()] g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => tooltip(Filtered[lv.GetNext()]))
   filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.value))
   ApplyFilter(lv)
@@ -291,11 +290,13 @@ x::{
 }
 c::!Tab
 
+#SuspendExempt true
 u::Reload
 i::KeyHistory
 o::Volume_Down
 p::Volume_Up
 
+#SuspendExempt false
 *h::
 *j::
 *k::
