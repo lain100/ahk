@@ -97,9 +97,9 @@ Lupine_Attack(mode := 1) {
 	MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
 	◢ := (offsetY / MY + offsetX / MX) > 1
 	◣ := (offsetY / MY - offsetX / MX) > 0
-  v := WithKey(!◣ / 2, ◣ + !◣ / 2, mode)
-  w := WithKey(!◣ + ◣ / 2,  ◣ / 2, mode)
-	MouseMove(WithKey(w, v, ◢) * MX, WithKey(v, w, ◢) * MY)
+  w1 := mode ? (◣ + !◣ / 2) : !◣ / 2
+  w2 := mode ?  ◣ / 2 : (!◣ +  ◣ / 2)
+	MouseMove((◢ ? w1 : w2) * MX, (◢ ? w2 : w1) * MY)
 	Tips("ルパインアタック", 300)
 }
 
@@ -122,13 +122,13 @@ Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
   trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
 
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
-	WithKey(HotKey, SubStr(HotKey, 1, -3), InStr(HotKey, " up"))
+	InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
 
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
-  SendEvent("{Blind}" WithKey(key, key2, trg = GetHotKey(A_PriorHotKey)))
+  SendEvent("{Blind}" trg = GetHotKey(A_PriorHotKey) ? key2 : key)
 
 WithKey(key := "", key2 := "", trg := "", cond := "P") =>
-  trg && (isInteger(trg) || GetKeyState(trg, cond)) ? key2 : key
+  trg && GetKeyState(trg, cond) ? key2 : key
 
 Using_MPC_BE(*) => (Substr(A_Clipboard, 1, 17) = "https://www.youtu") &&
   Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
