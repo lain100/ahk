@@ -185,8 +185,7 @@ FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
 *LShift::
 *LAlt::
 *RAlt::
-*LWin::
-*Delete::return
+*LWin::return
 
 w::l
 e::u
@@ -224,9 +223,9 @@ m::d
 #SuspendExempt true
 *vk1d::Layer(, "{Enter}")
 *vk1c::Layer(, "{BackSpace}")
-*Space::(ModeChange(1, 1) Layer("Shift", "{Space}"))
-*Delete Up::(A_PriorKey = "Delete" ? (SendEvent("{Shift Up}") ModeChange(1, 0)) : "")
-
+*Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
+*Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
+          ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
 q::@
