@@ -60,6 +60,16 @@ ApplyFilter(lv, keyword := "") {
   }
 }
 
+ShowFocusedItem(lv, time) {
+  static id := 0
+  your_id := ++id
+  SetTimer((*) => your_id = id ? TryShowItem(lv) : "", -time)
+}
+
+TryShowItem(lv) {
+  try tooltip(Filtered[lv.GetNext()])
+}
+
 Base64Encode(str) {
   bin := Buffer(StrPut(str, "UTF-8"))
   StrPut(str, bin, "UTF-8")
@@ -125,7 +135,7 @@ GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
 	InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
 
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
-  SendEvent("{Blind}" trg = GetHotKey(A_PriorHotKey) ? key2 : key)
+  SendEvent("{Blind}" (trg = GetHotKey(A_PriorHotKey) ? key2 : key))
 
 WithKey(key := "", key2 := "", trg := "", cond := "P") =>
   trg && GetKeyState(trg, cond) ? key2 : key
@@ -282,7 +292,7 @@ x::{
   filterEdit := g.AddEdit("w200 vFilter")
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
   lv.OnEvent("ItemCheck", (*) => (A_Clipboard := Filtered[lv.GetNext()] g.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => tooltip(Filtered[lv.GetNext()]))
+  lv.OnEvent("ItemFocus", (*) => ShowFocusedItem(lv, 200))
   filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.value))
   ApplyFilter(lv)
   g.Show()
@@ -363,7 +373,7 @@ c::9
 
 u::<
 i::=
-o::>
+*o::Arpeggio(">", ">{Left}", "u")
 p::\
 
 h::^
