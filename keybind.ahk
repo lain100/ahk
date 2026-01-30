@@ -47,27 +47,38 @@ ClipChanged(type) {
   tips("コピーしたよ")
 }
 
-ApplyFilter(lv, keyword := "") {
+ApplyFilter(lv, row, keyword := "") {
   global ClipHistory, Filtered := []
   lv.Delete()
   for item in ClipHistory {
     if keyword = "" || Instr(item, keyword) {
       Filtered.Push(item)
-      lv.Add("", item)
-      if Filtered.Length = 30
-        break
+      if Filtered.Length <= row
+        lv.Add("", item)
     }
   }
 }
 
-ShowFocusedItem(lv, time) {
-  static id := 0
-  your_id := ++id
-  SetTimer((*) => your_id = id ? TryShowItem(lv) : "", -time)
+RollList(lv, row, page, start := page * row, end := start + row) {
+  global Filtered
+  lv.Delete()
+  for idx, item in Filtered {
+    if idx <= start
+      continue
+    if idx > end
+      break
+    lv.Add("", item)
+  }
 }
 
-TryShowItem(lv) {
-  try tooltip(Filtered[lv.GetNext()])
+ShowFocusedItem(lv, start, time) {
+  static id := 0
+  your_id := ++id
+  SetTimer((*) => your_id = id ? TryShowItem(lv, start) : "", -time)
+}
+
+TryShowItem(lv, start) {
+  try tooltip(Filtered[start + lv.GetNext()])
 }
 
 Base64Encode(str) {
@@ -283,17 +294,23 @@ vkBA::End
 z::!F4
 x::{
   global ClipHistory, Filtered
-  static g := Gui()
+  static g := Gui(), row := 40
+  page := 0
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
-  lv := g.AddListView("cFFFFFF BackGround202020 w400 h500 Checked -Hdr", ["Text"])
-  filterEdit := g.AddEdit("w200 vFilter")
+  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
+  filterEdit := g.AddEdit("vFilter")
+  pageEdit := g.Add("Edit", "x+85 w50 vPage")
+  g.AddUpDown("vUpDown Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
-  lv.OnEvent("ItemCheck", (*) => (A_Clipboard := Filtered[lv.GetNext()] g.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => ShowFocusedItem(lv, 200))
-  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.value))
-  ApplyFilter(lv)
+  lv.OnEvent("ItemCheck", (*) => (A_Clipboard := Filtered[page * row + lv.GetNext()]
+                                  g.Destroy()))
+  lv.OnEvent("ItemFocus", (*) => ShowFocusedItem(lv, page * row, 200))
+  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, row, ctrl.value))
+  pageEdit.OnEvent("Change", (ctrl, *) => ((page := ctrl.Value - 1)
+                                            RollList(lv, row, page)))
+  ApplyFilter(lv, row)
   g.Show()
   WinSetTransParent(200, g.Hwnd)
 }
