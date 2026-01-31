@@ -49,7 +49,7 @@ ClipChanged(type) {
 
 ShowClipHistory(row := 30, page := 0) {
   global ClipHistory, Filtered
-  static g := Gui()
+  static g := Gui(), id := 0
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
@@ -57,17 +57,19 @@ ShowClipHistory(row := 30, page := 0) {
   lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
   lv.OnEvent("ItemCheck", (*) =>
     (A_Clipboard := Filtered[page * row + lv.GetNext()] g.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => ShowItem(lv, page, row, 200))
+  lv.OnEvent("ItemFocus", (*) => ( (your_id := ++id)
+    SetTimer((*) => your_id = id ? ShowItem(lv, page * row) : "", -200)))
   lv.OnEvent("ContextMenu", (*) => DeleteItem(lv, page, row, filterEdit.Value))
   filterEdit := g.AddEdit("vFilter")
   filterEdit.OnEvent("Change", (ctrl, *) => (
-    ApplyFilter(lv, row, ctrl.Value) (ud.Value := 1)
+    ApplyFilter(lv, page, row, ctrl.Value) (ud.Value := 1)
     ud.Opt("Range" Max(Ceil(Filtered.Length / row), 1) "-1")))
   pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
-    (page := ctrl.Value - 1) RollListView(lv, page, row, 100)))
+    (page := ctrl.Value - 1) (your_id := ++id)
+    SetTimer((*) => your_id = id ? ShowFiltered(lv, page, row) : "", -100)))
   ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
-  ApplyFilter(lv, row)
+  ApplyFilter(lv, page, row)
   g.Show()
   Try WinSetTransParent(200, g.Hwnd)
 }
@@ -82,48 +84,35 @@ DeleteItem(lv, page, row, filter) {
         break
       }
     }
-    ApplyFilter(lv, row, filter)
+    tips("削除したよ")
+    ApplyFilter(lv, page, row, filter)
   }
 }
 
-ApplyFilter(lv, row, keyword := "") {
+ApplyFilter(lv, page, row, keyword := "") {
   global ClipHistory, Filtered := []
-  lv.Delete()
   for item in ClipHistory {
-    if keyword = "" || Instr(item, keyword) {
+    if keyword = "" || Instr(item, keyword)
       Filtered.Push(item)
-      if Filtered.Length <= row
-        lv.Add("", item)
-    }
   }
+  ShowFiltered(lv, page, row)
 }
 
-RollListView(lv, page, row, time) {
-  static id := 0
-  your_id := ++id
-  SetTimer((*) => your_id = id ? ExecuteRoll(lv, page, row) : "", -time)
-}
-
-ExecuteRoll(lv, page, row, start := page * row, end := start + row) {
+ShowFiltered(lv, page, row) {
   global Filtered
   lv.Delete()
-  for idx, item in Filtered {
-    if idx <= start
-      continue
-    if idx > end
-      break
+  for item in Slice(Filtered, page * row + 1, (page + 1) * row)
     lv.Add("", item)
-  }
 }
 
-ShowItem(lv, page, row, time) {
-  static id := 0
-  your_id := ++id
-  SetTimer((*) => your_id = id ? TryShowItem(lv, page * row) : "", -time)
-}
-
-TryShowItem(lv, start) {
+ShowItem(lv, start) {
   try tooltip(Filtered[start + lv.GetNext()])
+}
+
+Slice(arr, start, end, newArr := []) {
+  Loop (Min(arr.Length, end) - start + 1)
+    newArr.Push(arr[start + A_Index - 1])
+  return newArr
 }
 
 Base64Encode(str) {
