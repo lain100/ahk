@@ -7,6 +7,7 @@ IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := [], Label := ""
 path := A_ScriptDir "\clip_history.txt"
 
 InitClipHistory(str := "") {
+  global path
   for line in StrSplit(FileRead(path), "`n", "`r") {
     if line = "" {
       if str
@@ -18,20 +19,25 @@ InitClipHistory(str := "") {
 }
 InitClipHistory()
 
-CheckDuplicate(text, str := "") {
-  for line in StrSplit(FileRead(path), "`n", "`r") {
+DeleteClipHistory(text, str := "", start := 1) {
+  global path
+  Base64History := StrSplit(FileRead(path), "`n", "`r")
+  for idx, line in Base64History {
     if line = "" {
-      if Base64Decode(str) = text
-        return false
+      if Base64Decode(str) = text {
+        Base64History.RemoveAt(start, idx - start + 1)
+        FileOpen(path, "w").Write(Join(Base64History, "`n"))
+        break
+      }
       str := ""
+      start := idx + 1
     } else
       str .= line
   }
-  return true
 }
 
 ClipChanged(type) {
-  global ClipHistory
+  global ClipHistory, path
   text := A_Clipboard
   if (type != 1 || text = "")
     return
@@ -41,9 +47,9 @@ ClipChanged(type) {
       break
     }
   }
+  DeleteClipHistory(text)
+  FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   ClipHistory.InsertAt(1, text)
-  if CheckDuplicate(text)
-    FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   tips("コピーしたよ")
 }
 
@@ -73,8 +79,8 @@ ShowClipHistory(row := 30) {
   Try WinSetTransParent(200, g.Hwnd)
 }
 
-DeleteItem(lv, row, page, filter, str := "", start := 1) {
-  global ClipHistory, Filtered
+DeleteItem(lv, row, page, keyword) {
+  global ClipHistory, Filtered, path
   try {
     text := Filtered[row * (page - 1) + lv.GetNext()]
     for idx, item in ClipHistory {
@@ -83,21 +89,9 @@ DeleteItem(lv, row, page, filter, str := "", start := 1) {
         break
       }
     }
-    Base64History := StrSplit(FileRead(path), "`n", "`r")
-    for idx, line in Base64History {
-      if line = "" {
-        if Base64Decode(str) = text {
-          Base64History.RemoveAt(start, idx - start + 1)
-          FileOpen(path, "w").Write(Join(Base64History, "`n"))
-          break
-        }
-        str := ""
-        start := idx + 1
-      } else
-        str .= line
-    }
+    DeleteClipHistory(text)
     tips("削除したよ")
-    ApplyFilter(lv, row, page, filter)
+    ApplyFilter(lv, row, page, keyword)
   }
 }
 
