@@ -53,22 +53,37 @@ ShowClipHistory(row := 30, page := 0) {
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
-  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
-  filterEdit := g.AddEdit("vFilter")
-  pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
-  ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
+  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
   lv.OnEvent("ItemCheck", (*) =>
     (A_Clipboard := Filtered[page * row + lv.GetNext()] g.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => ShowFocusedItem(lv, page, row, 200))
+  lv.OnEvent("ItemFocus", (*) => ShowItem(lv, page, row, 200))
+  lv.OnEvent("ContextMenu", (*) => DeleteItem(lv, page, row, filterEdit.Value))
+  filterEdit := g.AddEdit("vFilter")
   filterEdit.OnEvent("Change", (ctrl, *) => (
     ApplyFilter(lv, row, ctrl.Value) (ud.Value := 1)
     ud.Opt("Range" Max(Ceil(Filtered.Length / row), 1) "-1")))
+  pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
     (page := ctrl.Value - 1) RollListView(lv, page, row, 100)))
+  ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
   ApplyFilter(lv, row)
   g.Show()
-  WinSetTransParent(200, g.Hwnd)
+  Try WinSetTransParent(200, g.Hwnd)
+}
+
+DeleteItem(lv, page, row, filter) {
+  global ClipHistory, Filtered
+  try {
+    text := Filtered[page * row + lv.GetNext()]
+    for idx, item in ClipHistory {
+      if text = item {
+        ClipHistory.RemoveAt(idx)
+        break
+      }
+    }
+    ApplyFilter(lv, row, filter)
+  }
 }
 
 ApplyFilter(lv, row, keyword := "") {
@@ -101,7 +116,7 @@ ExecuteRoll(lv, page, row, start := page * row, end := start + row) {
   }
 }
 
-ShowFocusedItem(lv, page, row, time) {
+ShowItem(lv, page, row, time) {
   static id := 0
   your_id := ++id
   SetTimer((*) => your_id = id ? TryShowItem(lv, page * row) : "", -time)
