@@ -47,6 +47,30 @@ ClipChanged(type) {
   tips("コピーしたよ")
 }
 
+ShowClipHistory(row := 30, page := 0) {
+  global ClipHistory, Filtered
+  static g := Gui()
+  g.Destroy()
+  g := Gui("+AlwaysOnTop -Caption")
+  g.BackColor := "202020"
+  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
+  filterEdit := g.AddEdit("vFilter")
+  pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
+  ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
+  g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
+  lv.OnEvent("ItemCheck", (*) =>
+    (A_Clipboard := Filtered[page * row + lv.GetNext()] g.Destroy()))
+  lv.OnEvent("ItemFocus", (*) => ShowFocusedItem(lv, page, row, 200))
+  filterEdit.OnEvent("Change", (ctrl, *) => (
+    ApplyFilter(lv, row, ctrl.Value) (ud.Value := 1)
+    ud.Opt("Range" Max(Ceil(Filtered.Length / row), 1) "-1")))
+  pageEdit.OnEvent("Change", (ctrl, *) => (
+    (page := ctrl.Value - 1) RollListView(lv, page, row, 100)))
+  ApplyFilter(lv, row)
+  g.Show()
+  WinSetTransParent(200, g.Hwnd)
+}
+
 ApplyFilter(lv, row, keyword := "") {
   global ClipHistory, Filtered := []
   lv.Delete()
@@ -59,7 +83,13 @@ ApplyFilter(lv, row, keyword := "") {
   }
 }
 
-RollList(lv, row, page, start := page * row, end := start + row) {
+RollListView(lv, page, row, time) {
+  static id := 0
+  your_id := ++id
+  SetTimer((*) => your_id = id ? ExecuteRoll(lv, page, row) : "", -time)
+}
+
+ExecuteRoll(lv, page, row, start := page * row, end := start + row) {
   global Filtered
   lv.Delete()
   for idx, item in Filtered {
@@ -71,10 +101,10 @@ RollList(lv, row, page, start := page * row, end := start + row) {
   }
 }
 
-ShowFocusedItem(lv, start, time) {
+ShowFocusedItem(lv, page, row, time) {
   static id := 0
   your_id := ++id
-  SetTimer((*) => your_id = id ? TryShowItem(lv, start) : "", -time)
+  SetTimer((*) => your_id = id ? TryShowItem(lv, page * row) : "", -time)
 }
 
 TryShowItem(lv, start) {
@@ -292,28 +322,7 @@ vkBA::End
 	(SendEvent("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
 }
 z::!F4
-x::{
-  global ClipHistory, Filtered
-  static g := Gui(), row := 40
-  page := 0
-  g.Destroy()
-  g := Gui("+AlwaysOnTop -Caption")
-  g.BackColor := "202020"
-  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
-  filterEdit := g.AddEdit("vFilter")
-  pageEdit := g.Add("Edit", "x+85 w50 vPage")
-  g.AddUpDown("vUpDown Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
-  g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
-  lv.OnEvent("ItemCheck", (*) => (A_Clipboard := Filtered[page * row + lv.GetNext()]
-                                  g.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => ShowFocusedItem(lv, page * row, 200))
-  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, row, ctrl.value))
-  pageEdit.OnEvent("Change", (ctrl, *) => ((page := ctrl.Value - 1)
-                                            RollList(lv, row, page)))
-  ApplyFilter(lv, row)
-  g.Show()
-  WinSetTransParent(200, g.Hwnd)
-}
+x::ShowClipHistory()
 c::!Tab
 
 #SuspendExempt true
