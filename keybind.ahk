@@ -13,7 +13,7 @@ InitClipHistory(str := "") {
         ClipHistory.InsertAt(1, Base64Decode(str))
       str := ""
     } else
-      str := str line
+      str .= line
   }
 }
 InitClipHistory()
@@ -25,7 +25,7 @@ CheckDuplicate(text, str := "") {
         return false
       str := ""
     } else
-      str := str line
+      str .= line
   }
   return true
 }
@@ -47,7 +47,7 @@ ClipChanged(type) {
   tips("コピーしたよ")
 }
 
-ShowClipHistory(row := 30, page := 0) {
+ShowClipHistory(row := 30) {
   global ClipHistory, Filtered
   static g := Gui(), id := 0
   g.Destroy()
@@ -56,63 +56,81 @@ ShowClipHistory(row := 30, page := 0) {
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
   lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
   lv.OnEvent("ItemCheck", (*) =>
-    (A_Clipboard := Filtered[page * row + lv.GetNext()] g.Destroy()))
+    (A_Clipboard := Filtered[row * (ud.Value - 1) + lv.GetNext()] g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => ( (your_id := ++id)
-    SetTimer((*) => your_id = id ? ShowItem(lv, page * row) : "", -200)))
-  lv.OnEvent("ContextMenu", (*) => DeleteItem(lv, page, row, filterEdit.Value))
+    SetTimer((*) => your_id = id ? ShowItem(lv, row, ud.Value) : "", -200)))
+  lv.OnEvent("ContextMenu", (*) => DeleteItem(lv, row, ud.Value, filterEdit.Value))
   filterEdit := g.AddEdit("vFilter")
   filterEdit.OnEvent("Change", (ctrl, *) => (
-    ApplyFilter(lv, page, row, ctrl.Value) (ud.Value := 1)
-    ud.Opt("Range" Max(Ceil(Filtered.Length / row), 1) "-1")))
+    ApplyFilter(lv, row, ud.Value, ctrl.Value) (limit := Ceil(Filtered.Length / row))
+    ud.Value := Min(limit, ud.Value) ud.Opt("Range" limit "-1")))
   pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
-  pageEdit.OnEvent("Change", (ctrl, *) => (
-    (page := ctrl.Value - 1) (your_id := ++id)
-    SetTimer((*) => your_id = id ? ShowFiltered(lv, page, row) : "", -100)))
+  pageEdit.OnEvent("Change", (ctrl, *) => ( (your_id := ++id)
+    SetTimer((*) => your_id = id ? ShowFiltered(lv, row, ud.Value) : "", -100)))
   ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
-  ApplyFilter(lv, page, row)
+  ApplyFilter(lv, row, ud.Value)
   g.Show()
   Try WinSetTransParent(200, g.Hwnd)
 }
 
-DeleteItem(lv, page, row, filter) {
+DeleteItem(lv, row, page, filter, str := "", start := 1) {
   global ClipHistory, Filtered
   try {
-    text := Filtered[page * row + lv.GetNext()]
+    text := Filtered[row * (page - 1) + lv.GetNext()]
     for idx, item in ClipHistory {
       if text = item {
         ClipHistory.RemoveAt(idx)
         break
       }
     }
+    Base64History := StrSplit(FileRead(path), "`n", "`r")
+    for idx, line in Base64History {
+      if line = "" {
+        if Base64Decode(str) = text {
+          Base64History.RemoveAt(start, idx - start + 1)
+          FileOpen(path, "w").Write(Join(Base64History, "`n"))
+          break
+        }
+        str := ""
+        start := idx + 1
+      } else
+        str .= line
+    }
     tips("削除したよ")
-    ApplyFilter(lv, page, row, filter)
+    ApplyFilter(lv, row, page, filter)
   }
 }
 
-ApplyFilter(lv, page, row, keyword := "") {
+ApplyFilter(lv, row, page, keyword := "") {
   global ClipHistory, Filtered := []
   for item in ClipHistory {
     if keyword = "" || Instr(item, keyword)
       Filtered.Push(item)
   }
-  ShowFiltered(lv, page, row)
+  ShowFiltered(lv, row, page)
 }
 
-ShowFiltered(lv, page, row) {
+ShowFiltered(lv, row, page) {
   global Filtered
   lv.Delete()
-  for item in Slice(Filtered, page * row + 1, (page + 1) * row)
+  for item in Slice(Filtered, row * (page - 1) + 1, row * page)
     lv.Add("", item)
 }
 
-ShowItem(lv, start) {
-  try tooltip(Filtered[start + lv.GetNext()])
+ShowItem(lv, row, page) {
+  try tooltip(Filtered[row * (page - 1) + lv.GetNext()])
 }
 
 Slice(arr, start, end, newArr := []) {
-  Loop (Min(arr.Length, end) - start + 1)
+  Loop (Min(arr.Length, end) - Max(start, 1) + 1)
     newArr.Push(arr[start + A_Index - 1])
   return newArr
+}
+
+Join(arr, sep := ",", str := "") {
+  for index, param in arr
+    str .= param (index = arr.Length ? "" : sep)
+  return str
 }
 
 Base64Encode(str) {
