@@ -16,8 +16,8 @@ InitClipHistory(str := "") {
     } else
       str .= line
   }
+  return ClipHistory
 }
-InitClipHistory()
 
 ClipHistory_Remove(text) {
   global ClipHistory
@@ -47,10 +47,10 @@ ClipHistory_File_Remove(text, str := "", start := 1) {
 }
 
 ClipChanged(type) {
-  global ClipHistory, path
+  static ClipHistory := InitClipHistory()
   text := A_Clipboard
   if (type != 1 || text = "")
-    return
+    return ClipHistory
   ClipHistory_Remove(text)
   ClipHistory.InsertAt(1, text)
   ClipHistory_File_Remove(text)
@@ -58,30 +58,30 @@ ClipChanged(type) {
   tips("コピーしたよ")
 }
 
-ShowClipHistory(row := 30) {
-  global ClipHistory, Filtered
-  static g := Gui(), id := 0
+ShowClipHistory(row := 30, id := 0, page := 1) {
+  global Filtered
+  static g := Gui(), ClipHistory := ClipChanged(0)
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
   lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" row, ["Text"])
   lv.OnEvent("ItemCheck", (*) =>
-    (A_Clipboard := Filtered[row * (ud.Value - 1) + lv.GetNext()] g.Destroy()))
+    (A_Clipboard := Filtered[row * (page - 1) + lv.GetNext()] g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => ( (your_id := ++id)
-    SetTimer((*) => your_id = id ? ShowItem(lv, row, ud.Value) : "", -200)))
-  lv.OnEvent("ContextMenu", (*) => RemoveItem(lv, row, ud.Value, filterEdit.Value))
+    SetTimer((*) => your_id = id ? ShowItem(lv, row, page) : "", -200)))
+  lv.OnEvent("ContextMenu", (*) => RemoveItem(lv, row, page, filterEdit.Value))
   filterEdit := g.AddEdit("vFilter")
   filterEdit.OnEvent("Change", (ctrl, *) => (
-    ApplyFilter(lv, row, ud.Value, ctrl.Value) (limit := Ceil(Filtered.Length / row))
-    ud.Value := Min(limit, ud.Value) ud.Opt("Range" limit "-1")))
+    ApplyFilter(lv, row, page, ctrl.Value) (limit := Ceil(Filtered.Length / row))
+    page := Min(limit, ud.Value) ud.Opt("Range" limit "-1")))
   pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
-  pageEdit.OnEvent("Change", (ctrl, *) => ( (your_id := ++id)
-    SetTimer((*) => your_id = id ? ShowFiltered(lv, row, ctrl.Value) : "", -100)))
+  pageEdit.OnEvent("Change", (ctrl, *) => ( (your_id := ++id) (page := ctrl.Value)
+    SetTimer((*) => your_id = id ? ShowFiltered(lv, row, page) : "", -100)))
   ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
-  ApplyFilter(lv, row, ud.Value)
+  ApplyFilter(lv, row, page)
   g.Show()
-  Try WinSetTransParent(200, g.Hwnd)
+  try WinSetTransParent(200, g.Hwnd)
 }
 
 RemoveItem(lv, row, page, keyword) {
@@ -106,9 +106,11 @@ ApplyFilter(lv, row, page, keyword := "") {
 
 ShowFiltered(lv, row, page) {
   global Filtered
-  lv.Delete()
-  for item in Slice(Filtered, row * (page - 1) + 1, row * page)
-    lv.Add("", item)
+  try {
+    lv.Delete()
+    for item in Slice(Filtered, row * (page - 1) + 1, row * page)
+      lv.Add("", item)
+  }
 }
 
 ShowItem(lv, row, page) {
@@ -198,7 +200,7 @@ WithKey(key := "", key2 := "", trg := "", cond := "P") =>
 Using_MPC_BE(*) => (Substr(A_Clipboard, 1, 17) = "https://www.youtu") &&
   Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
 
-Search(url) => (SendEvent("^{c}") Sleep(100) Run(url A_Clipboard))
+Search(url) => (SendEvent("{Blind}^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
@@ -207,7 +209,7 @@ InitMode() {
   Lbl := Box.AddText("cFFFFFF x20 y20 w200 h80")
   Lbl.SetFont("s11", "Segoe UI")
   Box.BackColor := "202020"
-  Box.Show("y200 w90 h100 NA")
+  Box.Show("y200 w100 h100 NA")
   WinSetExStyle("+0x20", Box.Hwnd)
   WinSetTransParent(128, Box.Hwnd)
   return Lbl
@@ -218,14 +220,15 @@ ModeChange(mode, bool) {
   global IME := mode = 0 ? bool : IME,
        SandS := mode = 1 ? bool : SandS,
          IPA := mode = 2 ? bool : IPA
-  Label.Text := Join([IME = -1 ? "" : (IME ? "かな" : "英字"), SandS ? "SHIFT" : "",
-                      A_isSuspended ? "Suspend": (IPA ? "IPA" : "")], "`n")
+  Label.Text := Join([ IME = -1 ?        "" : "   " (IME ? "かな" : "英字"),
+                          SandS ? "  SHIFT" : "",
+                  A_isSuspended ? "SUSPEND" : (IPA ? "    IPA" : "")], "`n")
 }
 
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
   Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
 
-for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift Lwin LAlt RAlt", " ")
+for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Delete Tab LShift Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
 w::l
@@ -261,15 +264,13 @@ m::d
 .::g
 /::z
 
-vk1c & F24::return
-vk1d & F24::return
-Delete & F24::return
-
 #SuspendExempt true
+vk1c & F24::
+vk1d & F24::return
 *vk1d Up::SendEvent(A_PriorKey = "" ? "{Blind}{Enter}" : "")
 *vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
-*Delete Up::(SendEvent(A_PriorKey != "Delete" ? "" :
+*Delete Up::(SendEvent(A_PriorKey != "Delete" ? "" : "{Blind}"
             (SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space")))
   ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
 
@@ -281,7 +282,7 @@ w::[
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::GetKeyState("Space", "P") ? Layer("LWin") : SendEvent("(")
+*s::GetKeyState("Space", "P") ? Layer("LWin") : SendEvent("{Blind}(")
 *d::GetKeyState("Space", "P") ? Layer("LAlt") : Arpeggio("'", "'{Left}")
 *f::Arpeggio(")", "){Left}", "s")
 g::&
