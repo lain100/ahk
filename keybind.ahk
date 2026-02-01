@@ -1,10 +1,22 @@
 ﻿#Requires AutoHotkey v2
 #SingleInstance force
-OnClipboardChange Using_MPC_BE
 OnClipboardChange ClipChanged
 
 IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := []
 path := A_ScriptDir "\clip_history.txt"
+
+ClipChanged(type, text := A_Clipboard) {
+  static ClipHistory := InitClipHistory()
+  if type != 1
+    return ClipHistory
+  ClipHistory_Remove(text)
+  ClipHistory.InsertAt(1, text)
+  ClipHistory_File_Remove(text)
+  FileAppend(Base64Encode(text) "`n", path, "UTF-8")
+  if Substr(A_Clipboard, 1, 17) = "https://www.youtu"
+    Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
+  Tips("コピーしたよ")
+}
 
 InitClipHistory(str := "") {
   global ClipHistory, path
@@ -37,25 +49,13 @@ ClipHistory_File_Remove(text, str := "", start := 1) {
       if Base64Decode(str) = text {
         ClipHistoryFile.RemoveAt(start, idx - start + 1)
         FileOpen(path, "w").Write(Join(ClipHistoryFile, "`n"))
-        break
+        return
       }
       str := ""
       start := idx + 1
     } else
       str .= line
   }
-}
-
-ClipChanged(type) {
-  static ClipHistory := InitClipHistory()
-  text := A_Clipboard
-  if (type != 1 || text = "")
-    return ClipHistory
-  ClipHistory_Remove(text)
-  ClipHistory.InsertAt(1, text)
-  ClipHistory_File_Remove(text)
-  FileAppend(Base64Encode(text) "`n", path, "UTF-8")
-  tips("コピーしたよ")
 }
 
 ShowClipHistory(row := 30, id := 0, page := 1) {
@@ -91,7 +91,7 @@ RemoveItem(lv, row, page, keyword) {
     ClipHistory_Remove(text)
     ClipHistory_File_Remove(text)
     ApplyFilter(lv, row, page, keyword)
-    tips("削除したよ")
+    Tips("削除したよ")
   }
 }
 
@@ -161,27 +161,27 @@ CryptStringToBinary(str) {
 }
 
 Lupine_Attack(mode := 1) {
-	WinGetPos(&X, &Y, &W, &H, "A")
-	MouseGetPos(&offsetX, &offsetY)
-	MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
-	◢ := (offsetY / MY + offsetX / MX) > 1
-	◣ := (offsetY / MY - offsetX / MX) > 0
+  WinGetPos(&X, &Y, &W, &H, "A")
+  MouseGetPos(&offsetX, &offsetY)
+  MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
+  ◢ := (offsetY / MY + offsetX / MX) > 1
+  ◣ := (offsetY / MY - offsetX / MX) > 0
   w1 := mode ? (◣ + !◣ / 2) : !◣ / 2
   w2 := mode ?  ◣ / 2 : (!◣ +  ◣ / 2)
-	MouseMove((◢ ? w1 : w2) * MX, (◢ ? w2 : w1) * MY)
-	Tips("ルパインアタック", 300)
+  MouseMove((◢ ? w1 : w2) * MX, (◢ ? w2 : w1) * MY)
+  Tips("ルパインアタック", 300)
 }
 
 Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   SendEvent(key ? "{Blind}{" key " Down}" : "") KeyWait(HotKey)
   SendEvent(key ? "{Blind}{" key " Up}"   : "")
-	SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
+  SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
 }
 
 Prim(str, cond := "P") {
-	for key in ["Ctrl", "Shift"]
+  for key in ["Ctrl", "Shift"]
     str := WithKey(str, "{" key " Up}" str "{" key " Down}", key, cond)
-	return str
+  return str
 }
 
 Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
@@ -189,16 +189,13 @@ Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
   trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
 
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
-	InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
+  InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
 
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
   SendEvent("{Blind}" (trg = GetHotKey(A_PriorHotKey) ? key2 : key))
 
 WithKey(key := "", key2 := "", trg := "", cond := "P") =>
   trg && GetKeyState(trg, cond) ? key2 : key
-
-Using_MPC_BE(*) => (Substr(A_Clipboard, 1, 17) = "https://www.youtu") &&
-  Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
 
 Search(url) => (SendEvent("{Blind}^{c}") Sleep(100) Run(url A_Clipboard))
 
