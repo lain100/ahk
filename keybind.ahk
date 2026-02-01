@@ -7,7 +7,7 @@ IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := [], Label := ""
 path := A_ScriptDir "\clip_history.txt"
 
 InitClipHistory(str := "") {
-  global path
+  global ClipHistory, path
   for line in StrSplit(FileRead(path), "`n", "`r") {
     if line = "" {
       if str
@@ -19,7 +19,7 @@ InitClipHistory(str := "") {
 }
 InitClipHistory()
 
-DeleteClipHistory(text, str := "", start := 1) {
+DeleteBase64History(text, str := "", start := 1) {
   global path
   Base64History := StrSplit(FileRead(path), "`n", "`r")
   for idx, line in Base64History {
@@ -47,9 +47,9 @@ ClipChanged(type) {
       break
     }
   }
-  DeleteClipHistory(text)
-  FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   ClipHistory.InsertAt(1, text)
+  DeleteBase64History(text)
+  FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   tips("コピーしたよ")
 }
 
@@ -89,7 +89,7 @@ DeleteItem(lv, row, page, keyword) {
         break
       }
     }
-    DeleteClipHistory(text)
+    DeleteBase64History(text)
     tips("削除したよ")
     ApplyFilter(lv, row, page, keyword)
   }
