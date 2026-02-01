@@ -171,11 +171,9 @@ Lupine_Attack(mode := 1) {
 }
 
 Layer(key := "", key2 := "", HotKey := GetHotKey()) {
-  static cord
-  cord := HotKey = "vk1c" || HotKey = "vk1d" ? HotKey : ""
-  ( SendEvent(key ? "{Blind}{" key " Down}" : "") KeyWait(HotKey)
-    SendEvent(key ? "{Blind}{" key " Up}"   : ""))
-	SendEvent(key2 && A_PriorKey = (HotKey = cord ? "" : HotKey) ? "{Blind}" key2 : "")
+  SendEvent(key ? "{Blind}{" key " Down}" : "") KeyWait(HotKey)
+  SendEvent(key ? "{Blind}{" key " Up}"   : "")
+	SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
 }
 
 Prim(str, cond := "P") {
@@ -227,7 +225,7 @@ ModeChange(mode, bool) {
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
   Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
 
-for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift LAlt RAlt LWin", " ")
+for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
 w::l
@@ -263,9 +261,12 @@ m::d
 .::g
 /::z
 
+vk1c & F24::return
+vk1d & F24::return
+
 #SuspendExempt true
-*vk1d::Layer(, "{Enter}")
-*vk1c::Layer(, "{BackSpace}")
+*vk1d Up::SendEvent(A_PriorKey = "" ? "{Blind}{Enter}" : "")
+*vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
 *Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
           ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
