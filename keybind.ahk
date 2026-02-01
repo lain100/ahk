@@ -3,7 +3,7 @@
 OnClipboardChange Using_MPC_BE
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := [], Label := ""
+IME := -1, SandS := 0, IPA := 0, ClipHistory := [], Filtered := []
 path := A_ScriptDir "\clip_history.txt"
 
 InitClipHistory(str := "") {
@@ -204,22 +204,22 @@ Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
 InitMode() {
   Box := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  global Label := Box.AddText("cFFFFFF x20 y20 w200 h80")
-  Label.SetFont("s11", "Segoe UI")
+  Lbl := Box.AddText("cFFFFFF x20 y20 w200 h80")
+  Lbl.SetFont("s11", "Segoe UI")
   Box.BackColor := "202020"
   Box.Show("y200 w90 h100 NA")
   WinSetExStyle("+0x20", Box.Hwnd)
   WinSetTransParent(128, Box.Hwnd)
+  return Lbl
 }
-InitMode()
 
 ModeChange(mode, bool) {
+  static Label := InitMode()
   global IME := mode = 0 ? bool : IME,
        SandS := mode = 1 ? bool : SandS,
-         IPA := mode = 2 ? bool : IPA, Label
-  Label.Text := ( (IME = -1 ? "" : (IME ? "かな" : "英字")) "`n"
-                  (SandS ? "SandS" : "") "`n"
-                  (A_isSuspended ? "Suspend": (IPA ? "IPA" : "")))
+         IPA := mode = 2 ? bool : IPA
+  Label.Text := Join([IME = -1 ? "" : (IME ? "かな" : "英字"), SandS ? "SHIFT" : "",
+                      A_isSuspended ? "Suspend": (IPA ? "IPA" : "")], "`n")
 }
 
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
@@ -263,13 +263,15 @@ m::d
 
 vk1c & F24::return
 vk1d & F24::return
+Delete & F24::return
 
 #SuspendExempt true
 *vk1d Up::SendEvent(A_PriorKey = "" ? "{Blind}{Enter}" : "")
 *vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
-*Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
-          ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
+*Delete Up::(SendEvent(A_PriorKey != "Delete" ? "" :
+            (SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space")))
+  ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
