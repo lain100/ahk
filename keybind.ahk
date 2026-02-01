@@ -19,14 +19,24 @@ InitClipHistory(str := "") {
 }
 InitClipHistory()
 
-DeleteBase64History(text, str := "", start := 1) {
+ClipHistory_Remove(text) {
+  global ClipHistory
+  for idx, item in ClipHistory {
+    if text = item {
+      ClipHistory.RemoveAt(idx)
+      return
+    }
+  }
+}
+
+ClipHistory_File_Remove(text, str := "", start := 1) {
   global path
-  Base64History := StrSplit(FileRead(path), "`n", "`r")
-  for idx, line in Base64History {
+  ClipHistoryFile := StrSplit(FileRead(path), "`n", "`r")
+  for idx, line in ClipHistoryFile {
     if line = "" {
       if Base64Decode(str) = text {
-        Base64History.RemoveAt(start, idx - start + 1)
-        FileOpen(path, "w").Write(Join(Base64History, "`n"))
+        ClipHistoryFile.RemoveAt(start, idx - start + 1)
+        FileOpen(path, "w").Write(Join(ClipHistoryFile, "`n"))
         break
       }
       str := ""
@@ -41,14 +51,9 @@ ClipChanged(type) {
   text := A_Clipboard
   if (type != 1 || text = "")
     return
-  for idx, item in ClipHistory {
-    if text = item {
-      ClipHistory.RemoveAt(idx)
-      break
-    }
-  }
+  ClipHistory_Remove(text)
   ClipHistory.InsertAt(1, text)
-  DeleteBase64History(text)
+  ClipHistory_File_Remove(text)
   FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   tips("コピーしたよ")
 }
@@ -65,33 +70,28 @@ ShowClipHistory(row := 30) {
     (A_Clipboard := Filtered[row * (ud.Value - 1) + lv.GetNext()] g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => ( (your_id := ++id)
     SetTimer((*) => your_id = id ? ShowItem(lv, row, ud.Value) : "", -200)))
-  lv.OnEvent("ContextMenu", (*) => DeleteItem(lv, row, ud.Value, filterEdit.Value))
+  lv.OnEvent("ContextMenu", (*) => RemoveItem(lv, row, ud.Value, filterEdit.Value))
   filterEdit := g.AddEdit("vFilter")
   filterEdit.OnEvent("Change", (ctrl, *) => (
     ApplyFilter(lv, row, ud.Value, ctrl.Value) (limit := Ceil(Filtered.Length / row))
     ud.Value := Min(limit, ud.Value) ud.Opt("Range" limit "-1")))
   pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => ( (your_id := ++id)
-    SetTimer((*) => your_id = id ? ShowFiltered(lv, row, ud.Value) : "", -100)))
+    SetTimer((*) => your_id = id ? ShowFiltered(lv, row, ctrl.Value) : "", -100)))
   ud := g.AddUpDown("vNum Range" Ceil(ClipHistory.Length / row) "-1 Wrap")
   ApplyFilter(lv, row, ud.Value)
   g.Show()
   Try WinSetTransParent(200, g.Hwnd)
 }
 
-DeleteItem(lv, row, page, keyword) {
-  global ClipHistory, Filtered, path
+RemoveItem(lv, row, page, keyword) {
+  global Filtered
   try {
     text := Filtered[row * (page - 1) + lv.GetNext()]
-    for idx, item in ClipHistory {
-      if text = item {
-        ClipHistory.RemoveAt(idx)
-        break
-      }
-    }
-    DeleteBase64History(text)
-    tips("削除したよ")
+    ClipHistory_Remove(text)
+    ClipHistory_File_Remove(text)
     ApplyFilter(lv, row, page, keyword)
+    tips("削除したよ")
   }
 }
 
@@ -227,22 +227,8 @@ ModeChange(mode, bool) {
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
   Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
 
-*-::
-*^::
-*\::
-*t::
-*y::
-*@::
-*[::
-*]::
-*b::
-*Esc::
-*Tab::
-*vkE2::
-*LShift::
-*LAlt::
-*RAlt::
-*LWin::return
+for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift LAlt RAlt LWin", " ")
+  HotKey("*" key, (*) => "")
 
 w::l
 e::u
@@ -283,6 +269,7 @@ m::d
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
 *Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
           ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
+
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
 q::@
