@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, path := A_ScriptDir "\clip_history.txt"
+IME := -1, SandS := 0, IPA := 0, path := "clip_history"
 
 ClipChanged(type, text := A_Clipboard) {
   static ClipHistory := ClipHistory_Init()
@@ -18,7 +18,7 @@ ClipChanged(type, text := A_Clipboard) {
 }
 
 ClipHistory_Init(code := "", ClipHistory := []) {
-  for line in StrSplit(FileRead(path), "`n", "`r") {
+  for line in StrSplit(FileOpen(path, "rw").Read(), "`n", "`r") {
     if line = "" {
       if code
         ClipHistory.InsertAt(1, Base64Decode(code))
@@ -54,21 +54,21 @@ ClipHistory_File_Remove(text, start := 1, code := "") {
   }
 }
 
-ShowClipHistory(r := 30) {
+ShowClipHistory(r := 44) {
   static g := Gui(), ClipHistory := ClipChanged("Call Init")
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
   g.BackColor := "202020"
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
-  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr r" r, ["Text"])
+  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr w500 r" r, ["Text"])
   lv.OnEvent("ItemCheck", (*) => (
     (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()]) g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
     (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv) : "", -200)))
   lv.OnEvent("ContextMenu", (*) => RemoveItem(lv, filterEdit.Value))
-  filterEdit := g.AddEdit("vFilter")
+  filterEdit := g.AddEdit("vFilter w215")
   filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
-  pageEdit := g.Add("Edit", "x+85 w50 vPage ReadOnly")
+  pageEdit := g.Add("Edit", "x+m w48 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
     (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
   ud := g.AddUpDown("Wrap")
@@ -229,7 +229,7 @@ Search(url) => (SendEvent("{Blind}^{c}") Sleep(100) Run(url A_Clipboard))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Delete Tab LShift Lwin LAlt RAlt", " ")
+for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
 w::l
@@ -271,9 +271,8 @@ vk1d & F24::return
 *vk1d Up::SendEvent(A_PriorKey = "" ? "{Blind}{Enter}" : "")
 *vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
-*Delete Up::(SendEvent(A_PriorKey != "Delete" ? "" : "{Blind}"
-            (SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space")))
-  ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
+*Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
+          ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
