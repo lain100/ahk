@@ -12,10 +12,10 @@ ClipChanged(type, text := A_Clipboard) {
   ClipHistory.InsertAt(1, text)
   ClipHistory_File_Remove(text)
   FileAppend(Base64Encode(text) "`n", path, "UTF-8")
-  if Substr(A_Clipboard, 1, 17) = "https://www.youtu"
-    Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
-  else if Always(board, pos => InStr(A_Clipboard, pos))
-    Run("C:\Program Files\Egaroucid_7_8_0\Egaroucid_7_8_0_SIMD.exe")
+  if Substr(text, 1, 17) = "https://www.youtu" {
+    try Run("C:\Program Files\MPC-BE\mpc-be64.exe " text)
+  } else if Always(board, pos => InStr(text, pos))
+    try Run("C:\Program Files\Egaroucid_7_8_0\Egaroucid_7_8_0_SIMD.exe")
   Tips("コピーしたよ")
 }
 
