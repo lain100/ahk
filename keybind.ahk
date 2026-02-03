@@ -5,7 +5,7 @@ OnClipboardChange ClipChanged
 IME := -1, SandS := 0, IPA := 0, path := "clip_history"
 
 ClipChanged(type, text := A_Clipboard) {
-  static ClipHistory := ClipHistory_Init()
+  static ClipHistory := ClipHistory_Init(), board := StrSplit("f5 f4 d3 g6", " ")
   if type != 1
     return ClipHistory
   ClipHistory_Remove(text, ClipHistory)
@@ -14,6 +14,8 @@ ClipChanged(type, text := A_Clipboard) {
   FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   if Substr(A_Clipboard, 1, 17) = "https://www.youtu"
     Run("C:\Program Files\MPC-BE\mpc-be64.exe " A_Clipboard)
+  else if Always(board, pos => InStr(A_Clipboard, pos))
+    Run("C:\Program Files\Egaroucid_7_8_0\Egaroucid_7_8_0_SIMD.exe")
   Tips("コピーしたよ")
 }
 
@@ -118,6 +120,13 @@ Filter(arr, fn, newArr := []) {
   for item in arr
     fn(item) ? newArr.Push(item) : ""
   return newArr
+}
+
+Always(arr, fn) {
+  for item in arr
+    if fn(item) == false
+      return false
+  return true
 }
 
 Join(arr, sep := ",", str := "") {
@@ -272,7 +281,7 @@ vk1d & F24::return
 *vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
 *Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
-          ModeChange(SandS, !SandS && WithKey(1, IME, "Space")))
+  A_PriorKey = "Delete" ? ModeChange(SandS, !SandS && WithKey(1, IME, "Space")) : "")
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
