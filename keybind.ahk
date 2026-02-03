@@ -10,7 +10,6 @@ ClipChanged(type, text := A_Clipboard) {
     return ClipHistory
   ClipHistory_Remove(text, ClipHistory)
   ClipHistory.InsertAt(1, text)
-  ClipHistory_File_Remove(text)
   FileAppend(Base64Encode(text) "`n", path, "UTF-8")
   if Substr(text, 1, 17) = "https://www.youtu" {
     try Run("C:\Program Files\MPC-BE\mpc-be64.exe " text)
@@ -31,28 +30,28 @@ ClipHistory_Init(code := "", ClipHistory := []) {
   return ClipHistory
 }
 
-ClipHistory_Remove(text, ClipHistory) {
-  for index, item in ClipHistory {
-    if text = item {
-      ClipHistory.RemoveAt(index)
-      return
-    }
-  }
+ClipHistory_IndexOf(text, ClipHistory) {
+  for index, item in ClipHistory
+    if text = item
+      return index
 }
 
-ClipHistory_File_Remove(text, start := 1, code := "") {
+ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
+  targetIndex := ClipHistory_IndexOf(text, ClipHistory)
+  if !targetIndex
+    return
+  ClipHistory.RemoveAt(targetIndex)
+  targetIndex := ClipHistory.Length - targetIndex + 2
   ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
-  for index, line in ClipHistoryCodes {
+  for end, line in ClipHistoryCodes {
     if line = "" {
-      if Base64Decode(code) = text {
-        ClipHistoryCodes.RemoveAt(start, index - start + 1)
+      if index = targetIndex {
+        ClipHistoryCodes.RemoveAt(start, end - start + 1)
         FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
-        return
       }
-      start := index + 1
-      code := ""
-    } else
-      code .= line
+      index++
+      start := end + 1
+    }
   }
 }
 
@@ -84,14 +83,13 @@ RemoveItem(lv, keyword) {
   try {
     text := lv.Filtered[lv.row * lv.page + lv.GetNext()]
     ClipHistory_Remove(text, lv.ClipHistory)
-    ClipHistory_File_Remove(text)
     ApplyFilter(lv, keyword)
     Tips("削除したよ")
   }
 }
 
 ApplyFilter(lv, keyword := "", value := lv.ud.Value) {
-  lv.Filtered := Filter(lv.ClipHistory, (item) => keyword = "" || Instr(item, keyword))
+  lv.Filtered := Filter(lv.ClipHistory, item => keyword = "" || Instr(item, keyword))
   limit := Ceil(lv.Filtered.Length / lv.row)
   lv.ud.Opt("Range" limit "-" Min(limit, 1))
   lv.ud.Value := Min(limit, Max(value, 1))
@@ -338,7 +336,7 @@ vkBA::End
 	(SendEvent("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
 }
 z::!F4
-x::ShowClipHistory()
+x::ShowClipHistory
 c::!Tab
 
 #SuspendExempt true
