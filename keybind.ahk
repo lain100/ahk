@@ -73,14 +73,15 @@ ShowClipHistory(r := 44) {
   lv.OnEvent("ItemCheck", (*) => (
     (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
-    (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv) : "", -200)))
+    (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -200)))
   lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
-  filterEdit := g.AddEdit("vFilter w215")
-  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
-  pageEdit := g.Add("Edit", "x+m w48 vPage ReadOnly")
+  viewEdit := g.AddEdit("YM WP HP -Tabstop ReadOnly cFFFFFF BackGround202020 -VScroll")
+  pageEdit := g.Add("Edit", "X230 W48 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
     (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
   ud := g.AddUpDown("Wrap")
+  filterEdit := g.AddEdit("X+m vFilter w215")
+  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
   Assign(lv, {row: r, page: 0, id: -1, ud: ud, ClipHistory: ClipHistory, Filtered: []})
   ApplyFilter(lv)
   g.Show()
@@ -112,10 +113,11 @@ ShowFiltered(lv, start := lv.row * lv.page + 1) {
   }
 }
 
-ShowItem(lv) {
+ShowItem(lv, viewEdit) {
   try {
     items := lv.Filtered[lv.row * lv.page + lv.GetNext()]
-    tooltip(formatTime(items[1], "yyyy/MM/dd HH:mm:ss`n--`n") items[2])
+    viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
+                   . Join(StrSplit(items[2], "`n"), "`r`n")
   }
 }
 
