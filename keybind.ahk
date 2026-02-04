@@ -30,10 +30,7 @@ ClipHistory_Init(code := "", ClipHistory := []) {
       if code = ""
         continue
       items := StrSplit(code, "|")
-      if items.Length = 1
-        items := [DateAdd(A_NowUTC, 9, "Hours"), items[1]]
-      items[2] := Base64Decode(items[2])
-      ClipHistory.InsertAt(1, items)
+      ClipHistory.InsertAt(1, [items[1], Base64Decode(items[2])])
       code := ""
     } else
       code .= line
@@ -115,8 +112,11 @@ ShowFiltered(lv, start := lv.row * lv.page + 1) {
   }
 }
 
-ShowItem(lv, items := lv.Filtered[lv.row * lv.page + lv.GetNext()]) {
-  try tooltip(formatTime(items[1], "yyyy/MM/dd HH:mm:ss`n--`n") items[2])
+ShowItem(lv) {
+  try {
+    items := lv.Filtered[lv.row * lv.page + lv.GetNext()]
+    tooltip(formatTime(items[1], "yyyy/MM/dd HH:mm:ss`n--`n") items[2])
+  }
 }
 
 Slice(arr, start, end, newArr := []) {
@@ -328,7 +328,8 @@ vkBA::End
 *,::
 *.::( ModeChange(0, WithKey(WithKey(IME, 0, "n"), 1, "m"))
       Suspend(WithKey(0, -1, ".")) ModeChange(2, WithKey(0, !IPA, ","))
-      SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m")))
+      SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}", "L"), "n"),
+                                  Prim("{vkf2}", "L"), "m")))
 */::Browser_Home
 
 #SuspendExempt false
