@@ -4,25 +4,36 @@ OnClipboardChange ClipChanged
 
 IME := -1, SandS := 0, IPA := 0, path := "clip_history"
 
-ClipChanged(type, text := A_Clipboard) {
-  static ClipHistory := ClipHistory_Init(), board := StrSplit("f5 f4 d3 g6", " ")
+ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
+  static ClipHistory := ClipHistory_Init()
   if type != 1
     return ClipHistory
   ClipHistory_Remove(text, ClipHistory)
-  ClipHistory.InsertAt(1, text)
-  FileAppend(Base64Encode(text) "`n", path, "UTF-8")
+  ClipHistory.InsertAt(1, [time, text])
+  FileAppend(time "|" Base64Encode(text) "`n", path, "UTF-8")
   if Substr(text, 1, 17) = "https://www.youtu" {
-    try Run("C:\Program Files\MPC-BE\mpc-be64.exe " text)
-  } else if Always(board, pos => InStr(text, pos))
-    try Run("C:\Program Files\Egaroucid_7_8_0\Egaroucid_7_8_0_SIMD.exe")
+    try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
+  } else
+    TryRunEgaroucid(text)
   Tips("コピーしたよ")
+}
+
+TryRunEgaroucid(text) {
+  static app := "Egaroucid_7_8_0_SIMD.exe", board := StrSplit("f5 f4 d3 g6", " ")
+  if !WinExist("ahk_exe " app) && Always(board, pos => InStr(text, pos))
+    try Run("C:\Program Files\Egaroucid_7_8_0\" app)
 }
 
 ClipHistory_Init(code := "", ClipHistory := []) {
   for line in StrSplit(FileOpen(path, "rw").Read(), "`n", "`r") {
     if line = "" {
-      if code
-        ClipHistory.InsertAt(1, Base64Decode(code))
+      if code = ""
+        continue
+      items := StrSplit(code, "|")
+      if items.Length = 1
+        items := [DateAdd(A_NowUTC, 9, "Hours"), items[1]]
+      items[2] := Base64Decode(items[2])
+      ClipHistory.InsertAt(1, items)
       code := ""
     } else
       code .= line
@@ -31,8 +42,8 @@ ClipHistory_Init(code := "", ClipHistory := []) {
 }
 
 ClipHistory_IndexOf(text, ClipHistory) {
-  for index, item in ClipHistory
-    if text = item
+  for index, items in ClipHistory
+    if text = items[2]
       return index
 }
 
@@ -55,7 +66,7 @@ ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
   }
 }
 
-ShowClipHistory(r := 44) {
+ShowClipHistory(r := 24) {
   static g := Gui(), ClipHistory := ClipChanged("Call Init")
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
@@ -63,10 +74,10 @@ ShowClipHistory(r := 44) {
   g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
   lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr w500 r" r, ["Text"])
   lv.OnEvent("ItemCheck", (*) => (
-    (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()]) g.Destroy()))
+    (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) g.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
     (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv) : "", -200)))
-  lv.OnEvent("ContextMenu", (*) => RemoveItem(lv, filterEdit.Value))
+  lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
   filterEdit := g.AddEdit("vFilter w215")
   filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
   pageEdit := g.Add("Edit", "x+m w48 vPage ReadOnly")
@@ -79,44 +90,44 @@ ShowClipHistory(r := 44) {
   try WinSetTransParent(200, g.Hwnd)
 }
 
-RemoveItem(lv, keyword) {
+RemoveItem(lv) {
   try {
-    text := lv.Filtered[lv.row * lv.page + lv.GetNext()]
+    text := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
     ClipHistory_Remove(text, lv.ClipHistory)
-    ApplyFilter(lv, keyword)
     Tips("削除したよ")
   }
 }
 
 ApplyFilter(lv, keyword := "", value := lv.ud.Value) {
-  lv.Filtered := Filter(lv.ClipHistory, item => keyword = "" || Instr(item, keyword))
+  lv.Filtered := keyword ? Filter(lv.ClipHistory, items => Instr(items[2], keyword))
+                         : lv.ClipHistory.clone()
   limit := Ceil(lv.Filtered.Length / lv.row)
   lv.ud.Opt("Range" limit "-" Min(limit, 1))
   lv.ud.Value := Min(limit, Max(value, 1))
   (lv.ud.Value = value || lv.id = -1) ? ShowFiltered(lv) : ""
 }
 
+Filter(arr, fn, newArr := []) {
+  for item in arr
+    fn(item) ? newArr.Push(item) : ""
+  return newArr
+}
+
 ShowFiltered(lv, start := lv.row * lv.page + 1) {
   try {
     lv.Delete()
-    for item in Slice(lv.Filtered, start, start + lv.row - 1)
-      lv.Add("", item)
+    for items in Slice(lv.Filtered, start, start + lv.row - 1)
+      lv.Add("", items[2])
   }
 }
 
-ShowItem(lv) {
-  try tooltip(lv.Filtered[lv.row * lv.page + lv.GetNext()])
+ShowItem(lv, items := lv.Filtered[lv.row * lv.page + lv.GetNext()]) {
+  try tooltip(formatTime(items[1], "yyyy-MM-dd HH:mm:ss`n--`n") items[2])
 }
 
 Slice(arr, start, end, newArr := []) {
   Loop (Min(arr.Length, end) - Max(start, 1) + 1)
     newArr.Push(arr[start + A_Index - 1])
-  return newArr
-}
-
-Filter(arr, fn, newArr := []) {
-  for item in arr
-    fn(item) ? newArr.Push(item) : ""
   return newArr
 }
 
@@ -302,7 +313,7 @@ v::|
 u::Esc
 i::Tab
 o::Delete
-p::vk5d
+p::AppsKey
 
 h::Left
 j::Down
