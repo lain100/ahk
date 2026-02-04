@@ -66,7 +66,7 @@ ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
   }
 }
 
-ShowClipHistory(r := 24) {
+ShowClipHistory(r := 44) {
   static g := Gui(), ClipHistory := ClipChanged("Call Init")
   g.Destroy()
   g := Gui("+AlwaysOnTop -Caption")
@@ -107,12 +107,6 @@ ApplyFilter(lv, keyword := "", value := lv.ud.Value) {
   (lv.ud.Value = value || lv.id = -1) ? ShowFiltered(lv) : ""
 }
 
-Filter(arr, fn, newArr := []) {
-  for item in arr
-    fn(item) ? newArr.Push(item) : ""
-  return newArr
-}
-
 ShowFiltered(lv, start := lv.row * lv.page + 1) {
   try {
     lv.Delete()
@@ -122,12 +116,18 @@ ShowFiltered(lv, start := lv.row * lv.page + 1) {
 }
 
 ShowItem(lv, items := lv.Filtered[lv.row * lv.page + lv.GetNext()]) {
-  try tooltip(formatTime(items[1], "yyyy-MM-dd HH:mm:ss`n--`n") items[2])
+  try tooltip(formatTime(items[1], "yyyy/MM/dd HH:mm:ss`n--`n") items[2])
 }
 
 Slice(arr, start, end, newArr := []) {
   Loop (Min(arr.Length, end) - Max(start, 1) + 1)
     newArr.Push(arr[start + A_Index - 1])
+  return newArr
+}
+
+Filter(arr, fn, newArr := []) {
+  for item in arr
+    fn(item) ? newArr.Push(item) : ""
   return newArr
 }
 
