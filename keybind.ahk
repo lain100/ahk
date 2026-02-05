@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, path := "clip_history"
+IME := -1, SandS := 0, IPA := 0, path := "clip_history" 
 
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   static ClipHistory := ClipHistory_Init()
@@ -30,7 +30,8 @@ ClipHistory_Init(code := "", ClipHistory := []) {
       if code = ""
         continue
       items := StrSplit(code, "|")
-      ClipHistory.InsertAt(1, [items[1], Base64Decode(items[2])])
+      items[2] := Join(StrSplit(Base64Decode(items[2]), "`n"), "`r`n")
+      ClipHistory.InsertAt(1, items)
       code := ""
     } else
       code .= line
@@ -63,29 +64,34 @@ ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
   }
 }
 
-ShowClipHistory(r := 44) {
-  static g := Gui(), ClipHistory := ClipChanged("Call Init")
-  g.Destroy()
-  g := Gui("+AlwaysOnTop -Caption")
-  g.BackColor := "202020"
-  g.OnEvent("Escape", (*) => (tooltip() g.Destroy()))
-  lv := g.AddListView("cFFFFFF BackGround202020 Checked -Hdr w500 r" r, ["Text"])
+ShowClipHistory(r := 18, height := 40, theme := "cFFFFFF BackGround202020") {
+  static MyGui := Gui(), ClipHistory := ClipChanged("Call Init")
+  MyGui.Destroy()
+  MyGui := Gui("+AlwaysOnTop -Caption")
+  MyGui.BackColor := "202020"
+  MyGui.OnEvent("Escape", (*) => ((Hwnd := false) MyGui.Destroy()))
+  filterEdit := MyGui.AddEdit(theme " W700 H32 vFilter -Tabstop -Vscroll")
+  filterEdit.SetFont("s12", "Segoe UI")
+  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
+  pageEdit := MyGui.AddEdit("X+M W39 vPage ReadOnly")
+  pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
+    (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
+  ud := MyGui.AddUpDown("Wrap")
+  lv := MyGui.AddListView(theme " W750 XM Checked -Hdr H" r * 42, [""])
   lv.OnEvent("ItemCheck", (*) => (
-    (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) g.Destroy()))
+    (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) MyGui.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
     (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -200)))
   lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
-  viewEdit := g.AddEdit("YM WP HP -Tabstop ReadOnly cFFFFFF BackGround202020 -VScroll")
-  pageEdit := g.Add("Edit", "X230 W48 vPage ReadOnly")
-  pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
-    (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
-  ud := g.AddUpDown("Wrap")
-  filterEdit := g.AddEdit("X+m vFilter w215")
-  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
+  lv.Focus()
+  ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
+  SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
+  viewEdit := MyGui.AddEdit(theme " YM WP HP+40.4 ReadOnly -Tabstop -VScroll")
+  viewEdit.SetFont("s12", "Consolas")
   Assign(lv, {row: r, page: 0, id: -1, ud: ud, ClipHistory: ClipHistory, Filtered: []})
   ApplyFilter(lv)
-  g.Show()
-  try WinSetTransParent(200, g.Hwnd)
+  MyGui.Show()
+  try WinSetTransParent(200, MyGui.Hwnd)
 }
 
 RemoveItem(lv) {
@@ -116,8 +122,7 @@ ShowFiltered(lv, start := lv.row * lv.page + 1) {
 ShowItem(lv, viewEdit) {
   try {
     items := lv.Filtered[lv.row * lv.page + lv.GetNext()]
-    viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
-                   . Join(StrSplit(items[2], "`n"), "`r`n")
+    viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n") items[2]
   }
 }
 
@@ -471,5 +476,8 @@ m::!
 *l::Layer("Right")
 *x::Layer("x")
 *z::Layer("z")
+
+#HotIf WinActive("ahk_exe AutoHotkey64.exe")
+vk1d::Space
 
 Tips("終わったよ", 800)
