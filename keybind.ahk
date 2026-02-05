@@ -2,7 +2,7 @@
 #SingleInstance force
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, path := "clip_history" 
+IME := -1, SandS := 0, IPA := 0, path := "clip_history"
 
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   static ClipHistory := ClipHistory_Init()
@@ -30,7 +30,7 @@ ClipHistory_Init(code := "", ClipHistory := []) {
       if code = ""
         continue
       items := StrSplit(code, "|")
-      items[2] := Join(StrSplit(Base64Decode(items[2]), "`n"), "`r`n")
+      items[2] := StrReplace(Base64Decode(items[2]), "`n", "`r`n")
       ClipHistory.InsertAt(1, items)
       code := ""
     } else
@@ -69,28 +69,29 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   MyGui.Destroy()
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
-  MyGui.OnEvent("Escape", (*) => ((Hwnd := false) MyGui.Destroy()))
+  MyGui.OnEvent("Escape", (*) => MyGui.Destroy())
   filterEdit := MyGui.AddEdit(theme " W750 H34 vFilter -Vscroll")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
-  lv := MyGui.AddListView(theme " XM WP Checked -Hdr H" row * 19.1, [""])
+  lv := MyGui.AddListView(theme " WP Checked -Hdr H" row * 19.1, [""])
   lv.OnEvent("ItemCheck", (*) => (
     (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) MyGui.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
-    (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -200)))
+    (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -100)))
   lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
-  lv.Focus()
   viewEdit := MyGui.AddEdit(theme " YM WP HP+80 ReadOnly -Tabstop -VScroll")
   viewEdit.SetFont("s12", "Consolas")
   pageEdit := MyGui.AddEdit("X350 Y+m-32 W40 vPage ReadOnly")
-  pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
+  pageEdit.OnEvent("Change", (ctrl, *) => (
+    (lv.page := ctrl.Value - 1)
     (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
   ud := MyGui.AddUpDown("Wrap")
   ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {row: row, page: 0, id: -1, ud:ud, pageEdit: pageEdit,
               ClipHistory: ClipHistory, Filtered: []})
-  ApplyFilter(lv,, 1)
+  ApplyFilter(lv)
+  lv.Focus()
   MyGui.Show()
   try WinSetTransParent(200, MyGui.Hwnd)
 }
@@ -103,7 +104,7 @@ RemoveItem(lv) {
   }
 }
 
-ApplyFilter(lv, keyword := "", oldValue := lv.ud.Value) {
+ApplyFilter(lv, keyword := "", oldValue := Max(lv.ud.Value, 1)) {
   lv.Filtered := keyword ? Filter(lv.ClipHistory, items => Instr(items[2], keyword))
                          : lv.ClipHistory.clone()
   range := Max(Ceil(lv.Filtered.Length / lv.row), 1)
