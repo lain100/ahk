@@ -64,32 +64,33 @@ ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
   }
 }
 
-ShowClipHistory(r := 18, height := 40, theme := "cFFFFFF BackGround202020") {
+ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   static MyGui := Gui(), ClipHistory := ClipChanged("Call Init")
   MyGui.Destroy()
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
   MyGui.OnEvent("Escape", (*) => ((Hwnd := false) MyGui.Destroy()))
-  filterEdit := MyGui.AddEdit(theme " W700 H32 vFilter -Tabstop -Vscroll")
+  filterEdit := MyGui.AddEdit(theme " W750 H34 vFilter -Vscroll")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
-  pageEdit := MyGui.AddEdit("X+M W39 vPage ReadOnly")
-  pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
-    (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
-  ud := MyGui.AddUpDown("Wrap")
-  lv := MyGui.AddListView(theme " W750 XM Checked -Hdr H" r * 42, [""])
+  lv := MyGui.AddListView(theme " XM WP Checked -Hdr H" row * 19.1, [""])
   lv.OnEvent("ItemCheck", (*) => (
     (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) MyGui.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
     (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -200)))
   lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
   lv.Focus()
+  viewEdit := MyGui.AddEdit(theme " YM WP HP+80 ReadOnly -Tabstop -VScroll")
+  viewEdit.SetFont("s12", "Consolas")
+  pageEdit := MyGui.AddEdit("X350 Y+m-32 W40 vPage ReadOnly")
+  pageEdit.OnEvent("Change", (ctrl, *) => ((lv.page := ctrl.Value - 1)
+    (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
+  ud := MyGui.AddUpDown("Wrap")
   ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  viewEdit := MyGui.AddEdit(theme " YM WP HP+40.4 ReadOnly -Tabstop -VScroll")
-  viewEdit.SetFont("s12", "Consolas")
-  Assign(lv, {row: r, page: 0, id: -1, ud: ud, ClipHistory: ClipHistory, Filtered: []})
-  ApplyFilter(lv)
+  Assign(lv, {row: row, page: 0, id: -1, ud:ud, pageEdit: pageEdit,
+              ClipHistory: ClipHistory, Filtered: []})
+  ApplyFilter(lv,, 1)
   MyGui.Show()
   try WinSetTransParent(200, MyGui.Hwnd)
 }
@@ -102,13 +103,14 @@ RemoveItem(lv) {
   }
 }
 
-ApplyFilter(lv, keyword := "", value := lv.ud.Value) {
+ApplyFilter(lv, keyword := "", oldValue := lv.ud.Value) {
   lv.Filtered := keyword ? Filter(lv.ClipHistory, items => Instr(items[2], keyword))
                          : lv.ClipHistory.clone()
-  limit := Ceil(lv.Filtered.Length / lv.row)
-  lv.ud.Opt("Range" limit "-" Min(limit, 1))
-  lv.ud.Value := Min(limit, Max(value, 1))
-  (lv.ud.Value = value || lv.id = -1) ? ShowFiltered(lv) : ""
+  range := Max(Ceil(lv.Filtered.Length / lv.row), 1)
+  lv.pageEdit.Opt((range = 1 ? "-" : "+") "Tabstop")
+  lv.ud.Opt("Range" range "-1 Disabled" (range = 1))
+  lv.ud.Value := Min(range, oldValue)
+  (lv.ud.Value = oldValue || lv.id = -1) ? ShowFiltered(lv) : ""
 }
 
 ShowFiltered(lv, start := lv.row * lv.page + 1) {
@@ -476,8 +478,5 @@ m::!
 *l::Layer("Right")
 *x::Layer("x")
 *z::Layer("z")
-
-#HotIf WinActive("ahk_exe AutoHotkey64.exe")
-vk1d::Space
 
 Tips("終わったよ", 800)
