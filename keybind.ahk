@@ -8,7 +8,7 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   static ClipHistory := ClipHistory_Init()
   if type != 1
     return ClipHistory
-  ClipHistory_Remove(text, ClipHistory)
+  ClipHistory_Modify(text, "", ClipHistory)
   ClipHistory.InsertAt(1, [time, text])
   FileAppend(time "|" Base64Encode(text) "`n", path, "UTF-8")
   if Substr(text, 1, 17) = "https://www.youtu" {
@@ -44,18 +44,23 @@ ClipHistory_IndexOf(text, ClipHistory) {
       return index
 }
 
-ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
-  targetIndex := ClipHistory_IndexOf(text, ClipHistory)
+ClipHistory_Modify(oldText, newText, ClipHistory, index := 1, start := 1) {
+  targetIndex := ClipHistory_IndexOf(oldText, ClipHistory)
   if !targetIndex
     return
-  ClipHistory.RemoveAt(targetIndex)
-  targetIndex := ClipHistory.Length - targetIndex + 2
+  if newText {
+    time := ClipHistory[targetIndex][1]
+    ClipHistory[targetIndex][2] := newText
+  } else
+    ClipHistory.RemoveAt(targetIndex)
+  targetIndex := ClipHistory.Length - targetIndex + (newText ? 1 : 2)
   ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
   for end, line in ClipHistoryCodes {
     if line
       continue
     if index = targetIndex {
       ClipHistoryCodes.RemoveAt(start, end - start + 1)
+      newText ? ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
       FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
       return
     }
@@ -72,13 +77,13 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   MyGui.OnEvent("Escape", (*) => MyGui.Destroy())
   filterEdit := MyGui.AddEdit(theme " W750 H34 vFilter -Vscroll")
   filterEdit.SetFont("s12", "Segoe UI")
-  filterEdit.OnEvent("Change", (ctrl, *) => ApplyFilter(lv, ctrl.Value))
+  filterEdit.OnEvent("Change", (*) => ApplyFilter(lv))
   lv := MyGui.AddListView(theme " WP Checked -Hdr H" row * 19.1, [""])
   lv.OnEvent("ItemCheck", (*) => (
     (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) MyGui.Destroy()))
   lv.OnEvent("ItemFocus", (*) => (
     (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -100)))
-  lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
+  lv.OnEvent("ContextMenu", (*) => ModifyItem(lv))
   viewEdit := MyGui.AddEdit(theme " YM WP HP+80 -Tabstop -VScroll")
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (
@@ -86,8 +91,7 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   viewEdit.OnEvent("Change", (*) => (isChanged := true))
   viewEdit.OnEvent("LoseFocus", (ctrl, *) => (
     lv.Focus()
-    (isChanged ? (ApplyChangedText(lv, ctrl.Value)
-                  SetTimer((*) => ApplyFilter(lv, filterEdit.Value), -100)) : "")
+    (isChanged ? ModifyItem(lv, ctrl.Value) : "")
     (isChanged := false)))
   pageEdit := MyGui.AddEdit("X350 Y+m-32 W40 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
@@ -97,50 +101,23 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {row: row, page: 0, id: -1, ud:ud, pageEdit: pageEdit,
-              ClipHistory: ClipHistory, Filtered: []})
+              filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: []})
   ApplyFilter(lv)
   lv.Focus()
   MyGui.Show()
   try WinSetTransParent(200, MyGui.Hwnd)
 }
 
-RemoveItem(lv) {
-  try {
-    text := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
-    ClipHistory_Remove(text, lv.ClipHistory)
-    Tips("削除したよ")
-  }
-}
-
-ApplyChangedText(lv, text, index := 1, start := 1) {
-  if text = "" {
-    RemoveItem(lv)
-    return
-  }
+ModifyItem(lv, newText := "") {
   try {
     oldText := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
-    targetIndex := ClipHistory_IndexOf(oldText, lv.ClipHistory)
-    lv.ClipHistory[targetIndex][2] := text
-    time := lv.ClipHistory[targetIndex][1]
-    targetIndex := lv.ClipHistory.Length - targetIndex + 1
-    ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
-    for end, line in ClipHistoryCodes {
-      if line
-        continue
-      if index = targetIndex {
-        ClipHistoryCodes.RemoveAt(start, end - start + 1)
-        ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(text))
-        FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
-        Tips("変更したよ")
-        return
-      }
-      index++
-      start := end + 1
-    }
+    ClipHistory_Modify(oldText, newText, lv.ClipHistory)
+    SetTimer((*) => ApplyFilter(lv), newText ? -100 : -1)
+    Tips((newText ? "変更" : "削除") "したよ")
   }
 }
 
-ApplyFilter(lv, keyword := "", oldValue := Max(lv.ud.Value, 1)) {
+ApplyFilter(lv, keyword := lv.FilterEdit.Value, oldValue := Max(lv.ud.Value, 1)) {
   lv.Filtered := keyword ? Filter(lv.ClipHistory, items => Instr(items[2], keyword))
                          : lv.ClipHistory.clone()
   range := Max(Ceil(lv.Filtered.Length / lv.row), 1)
