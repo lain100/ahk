@@ -10,7 +10,7 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
     return ClipHistory
   ClipHistory_Remove(text, ClipHistory)
   ClipHistory.InsertAt(1, [time, text])
-  FileAppend(time "|" Base64Encode(StrReplace(text, "`r`n", "`n")) "`n", path, "UTF-8")
+  FileAppend(time "|" Base64Encode(text) "`n", path, "UTF-8")
   if Substr(text, 1, 17) = "https://www.youtu" {
     try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
   } else
@@ -30,8 +30,7 @@ ClipHistory_Init(code := "", ClipHistory := []) {
       if code = ""
         continue
       items := StrSplit(code, "|")
-      items[2] := StrReplace(Base64Decode(items[2]), "`n", "`r`n")
-      ClipHistory.InsertAt(1, items)
+      ClipHistory.InsertAt(1, [items[1], Base64Decode(items[2])])
       code := ""
     } else
       code .= line
@@ -53,19 +52,20 @@ ClipHistory_Remove(text, ClipHistory, index := 1, start := 1) {
   targetIndex := ClipHistory.Length - targetIndex + 2
   ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
   for end, line in ClipHistoryCodes {
-    if line = "" {
-      if index = targetIndex {
-        ClipHistoryCodes.RemoveAt(start, end - start + 1)
-        FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
-      }
-      index++
-      start := end + 1
+    if line
+      continue
+    if index = targetIndex {
+      ClipHistoryCodes.RemoveAt(start, end - start + 1)
+      FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
+      return
     }
+    index++
+    start := end + 1
   }
 }
 
 ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
-  static MyGui := Gui(), ClipHistory := ClipChanged("Call Init")
+  static MyGui := Gui(), ClipHistory := ClipChanged("Call Init"), isChanged := false
   MyGui.Destroy()
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
@@ -79,8 +79,16 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   lv.OnEvent("ItemFocus", (*) => (
     (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -100)))
   lv.OnEvent("ContextMenu", (*) => (RemoveItem(lv) ApplyFilter(lv, filterEdit.Value)))
-  viewEdit := MyGui.AddEdit(theme " YM WP HP+80 ReadOnly -Tabstop -VScroll")
+  viewEdit := MyGui.AddEdit(theme " YM WP HP+80 -Tabstop -VScroll")
   viewEdit.SetFont("s12", "Consolas")
+  viewEdit.OnEvent("Focus", (ctrl, *) => (
+    Ctrl.Value := StrReplace(RegExReplace(ctrl.Value, ".*\n--\n"), "`r", "")))
+  viewEdit.OnEvent("Change", (*) => (isChanged := true))
+  viewEdit.OnEvent("LoseFocus", (ctrl, *) => (
+    lv.Focus()
+    (isChanged ? (ApplyChangedText(lv, ctrl.Value)
+                  SetTimer((*) => ApplyFilter(lv, filterEdit.Value), -100)) : "")
+    (isChanged := false)))
   pageEdit := MyGui.AddEdit("X350 Y+m-32 W40 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
     (lv.page := ctrl.Value - 1)
@@ -101,6 +109,34 @@ RemoveItem(lv) {
     text := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
     ClipHistory_Remove(text, lv.ClipHistory)
     Tips("削除したよ")
+  }
+}
+
+ApplyChangedText(lv, text, index := 1, start := 1) {
+  if text = "" {
+    RemoveItem(lv)
+    return
+  }
+  try {
+    oldText := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
+    targetIndex := ClipHistory_IndexOf(oldText, lv.ClipHistory)
+    lv.ClipHistory[targetIndex][2] := text
+    time := lv.ClipHistory[targetIndex][1]
+    targetIndex := lv.ClipHistory.Length - targetIndex + 1
+    ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
+    for end, line in ClipHistoryCodes {
+      if line
+        continue
+      if index = targetIndex {
+        ClipHistoryCodes.RemoveAt(start, end - start + 1)
+        ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(text))
+        FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
+        Tips("変更したよ")
+        return
+      }
+      index++
+      start := end + 1
+    }
   }
 }
 
@@ -125,7 +161,8 @@ ShowFiltered(lv, start := lv.row * lv.page + 1) {
 ShowItem(lv, viewEdit) {
   try {
     items := lv.Filtered[lv.row * lv.page + lv.GetNext()]
-    viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n") items[2]
+    viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
+                   . StrReplace(items[2], "`n", "`r`n")
   }
 }
 
