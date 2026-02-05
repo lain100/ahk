@@ -70,7 +70,7 @@ ClipHistory_Modify(oldText, newText, ClipHistory, index := 1, start := 1) {
 }
 
 ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
-  static MyGui := Gui(), ClipHistory := ClipChanged("Call Init"), isChanged := false
+  static MyGui := Gui(), ClipHistory := ClipChanged("Call Init")
   MyGui.Destroy()
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
@@ -88,11 +88,7 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (
     Ctrl.Value := StrReplace(RegExReplace(ctrl.Value, ".*\n--\n"), "`r", "")))
-  viewEdit.OnEvent("Change", (*) => (isChanged := true))
-  viewEdit.OnEvent("LoseFocus", (ctrl, *) => (
-    lv.Focus()
-    (isChanged ? ModifyItem(lv, ctrl.Value) : "")
-    (isChanged := false)))
+  viewEdit.OnEvent("LoseFocus", (ctrl, *) => (lv.Focus() ModifyItem(lv, ctrl.Value)))
   pageEdit := MyGui.AddEdit("X350 Y+m-32 W40 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
     (lv.page := ctrl.Value - 1)
@@ -111,6 +107,8 @@ ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
 ModifyItem(lv, newText := "") {
   try {
     oldText := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
+    if oldText = newText
+      return
     ClipHistory_Modify(oldText, newText, lv.ClipHistory)
     SetTimer((*) => ApplyFilter(lv), newText ? -100 : -1)
     Tips((newText ? "変更" : "削除") "したよ")
