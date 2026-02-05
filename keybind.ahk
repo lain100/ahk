@@ -10,7 +10,7 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
     return ClipHistory
   ClipHistory_Remove(text, ClipHistory)
   ClipHistory.InsertAt(1, [time, text])
-  FileAppend(time "|" Base64Encode(text) "`n", path, "UTF-8")
+  FileAppend(time "|" Base64Encode(StrReplace(text, "`r`n", "`n")) "`n", path, "UTF-8")
   if Substr(text, 1, 17) = "https://www.youtu" {
     try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
   } else
