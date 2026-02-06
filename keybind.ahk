@@ -85,7 +85,6 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
   MyGui.OnEvent("Close", (*) => (lv.MyGui := false))
-  ; MyGui.OnEvent("Deactivate", (*) => MyGui.Hide())
   MyGui.OnEvent("Escape", (*) =>
     ControlGetFocus("A") = lv.Hwnd ? MyGui.Hide() : lv.Focus())
   filterEdit := MyGui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
@@ -94,11 +93,12 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   lv := MyGui.AddListView(theme " wp Checked -Hdr h" 4 + 19 * row, [""])
   lv.OnEvent("ItemCheck", (*) => ((A_Clipboard := GetFocusItem(lv)) MyGui.Hide()))
   lv.OnEvent("ItemFocus", (*) => (timer((*) => ShowFocusItem(lv), -100)))
-  lv.OnEvent("ContextMenu", (*) => ModifyItem(lv))
+  lv.OnEvent("ContextMenu", (*) => ((lv.FocusText := GetFocusItem(lv)) ModifyItem(lv)))
   viewEdit := MyGui.AddEdit(theme " ym wp hp+80 -Tabstop -VScroll")
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (
-    Ctrl.Value := StrReplace(RegExReplace(ctrl.Value, ".*\n--\n"), "`r", "")))
+    (lv.FocusText := GetFocusItem(lv))
+    (Ctrl.Value := StrReplace(RegExReplace(ctrl.Value, ".*\n--\n"), "`r", ""))))
   viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyItem(lv, ctrl.Value))
   pageEdit := MyGui.AddEdit("x350 y+m-32 w40 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
@@ -107,8 +107,9 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {row: row, page: 0, id: 0, ud:ud, pageEdit: pageEdit, viewEdit: viewEdit,
-      MyGui: MyGui, filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: []})
-  lv.focus()
+      MyGui: MyGui, filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: [],
+      FocusText: ""})
+  lv.Focus()
   return lv
 }
 
@@ -121,14 +122,21 @@ ShowClipHistory() {
   try WinSetTransParent(200, lv.MyGui.Hwnd)
 }
 
-GetFocusItem(lv) => lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
+GetFocusItem(lv) {
+  try
+    text := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
+  catch
+    text := ""
+  return text
+}
 
 ModifyItem(lv, newText := "") {
   try {
+    if lv.FocusText = ""
+      throw
     targetRow := lv.GetNext()
-    oldText := GetFocusItem(lv)
-    if oldText != newText {
-      ClipHistory_Modify(oldText, newText, lv.ClipHistory)
+    if lv.FocusText != newText {
+      ClipHistory_Modify(lv.FocusText, newText, lv.ClipHistory)
       Tips((newText ? "変更" : "削除") "したよ")
     }
   } catch {
