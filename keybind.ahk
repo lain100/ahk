@@ -48,17 +48,17 @@ ClipHistory_Modify(oldText, newText, ClipHistory, index := 1, start := 1) {
   targetIndex := ClipHistory_IndexOf(oldText, ClipHistory)
   if !targetIndex
     return
+  targetFileIndex := ClipHistory.Length - targetIndex + 1
   if newText {
     time := ClipHistory[targetIndex][1]
     ClipHistory[targetIndex][2] := newText
   } else
     ClipHistory.RemoveAt(targetIndex)
-  targetIndex := ClipHistory.Length - targetIndex + (newText ? 1 : 2)
   ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
   for end, line in ClipHistoryCodes {
     if line
       continue
-    if index = targetIndex {
+    if index = targetFileIndex {
       ClipHistoryCodes.RemoveAt(start, end - start + 1)
       newText ? ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
       FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
@@ -69,44 +69,56 @@ ClipHistory_Modify(oldText, newText, ClipHistory, index := 1, start := 1) {
   }
 }
 
-ShowClipHistory(row := 40, height := 18, theme := "cFFFFFF BackGround202020") {
-  static MyGui := Gui(), ClipHistory := ClipChanged("Call Init")
-  MyGui.Destroy()
+ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
+  ClipHistory := ClipChanged("Call Init")
+  timer := (f, time) => ((id := ++lv.id) SetTimer((*) => id = lv.id ? f() : "", time))
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
-  MyGui.OnEvent("Escape", (*) => MyGui.Destroy())
-  filterEdit := MyGui.AddEdit(theme " W750 H34 vFilter -Vscroll")
+  MyGui.OnEvent("Close", (*) => (lv.MyGui := false))
+  MyGui.OnEvent("Escape", (*) =>
+    ControlGetFocus("A") = lv.Hwnd ? MyGui.Hide() : lv.Focus())
+  filterEdit := MyGui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (*) => ApplyFilter(lv))
-  lv := MyGui.AddListView(theme " WP Checked -Hdr H" row * 19.1, [""])
-  lv.OnEvent("ItemCheck", (*) => (
-    (A_Clipboard := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]) MyGui.Destroy()))
-  lv.OnEvent("ItemFocus", (*) => (
-    (id := ++lv.id) SetTimer((*) => id = lv.id ? ShowItem(lv, viewEdit) : "", -100)))
+  lv := MyGui.AddListView(theme " wp Checked -Hdr h" row * 19.1, [""])
+  lv.OnEvent("ItemCheck", (*) => ((A_Clipboard := GetFocusItem(lv)) MyGui.Hide()))
+  lv.OnEvent("ItemFocus", (*) => (timer((*) => ShowItem(lv, viewEdit), -100)))
   lv.OnEvent("ContextMenu", (*) => ModifyItem(lv))
-  viewEdit := MyGui.AddEdit(theme " YM WP HP+80 -Tabstop -VScroll")
+  viewEdit := MyGui.AddEdit(theme " ym wp hp+80 -Tabstop -VScroll")
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (
     Ctrl.Value := StrReplace(RegExReplace(ctrl.Value, ".*\n--\n"), "`r", "")))
-  viewEdit.OnEvent("LoseFocus", (ctrl, *) => (lv.Focus() ModifyItem(lv, ctrl.Value)))
-  pageEdit := MyGui.AddEdit("X350 Y+m-32 W40 vPage ReadOnly")
+  viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyItem(lv, ctrl.Value))
+  pageEdit := MyGui.AddEdit("x350 y+m-32 w40 vPage ReadOnly")
   pageEdit.OnEvent("Change", (ctrl, *) => (
-    (lv.page := ctrl.Value - 1)
-    (id := ++lv.id) SetTimer((*) => id && id = lv.id ? ShowFiltered(lv) : "", -100)))
+    (lv.page := ctrl.Value - 1) (lv.id && timer((*) => ShowFiltered(lv), -100))))
   ud := MyGui.AddUpDown("Wrap")
   ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  Assign(lv, {row: row, page: 0, id: -1, ud:ud, pageEdit: pageEdit,
+  Assign(lv, {row: row, page: 0, id: 0, ud:ud, pageEdit: pageEdit, MyGui: MyGui,
               filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: []})
-  ApplyFilter(lv)
-  lv.Focus()
-  MyGui.Show()
-  try WinSetTransParent(200, MyGui.Hwnd)
+  return lv
 }
+
+ShowClipHistory() {
+  static lv
+  OnMessage(0x007B, PreventContextMenu)
+  PreventContextMenu(wParam, lParam, msg, hwnd) {
+    if (hwnd != lv.Hwnd)
+      return 0
+  }
+  lv := isSet(lv) && lv.MyGui ? lv : ClipHistoryLV_Init(40, 18)
+  lv.Focus()
+  ApplyFilter(lv)
+  lv.MyGui.Show()
+  try WinSetTransParent(200, lv.MyGui.Hwnd)
+}
+
+GetFocusItem(lv) => lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
 
 ModifyItem(lv, newText := "") {
   try {
-    oldText := lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
+    oldText := GetFocusItem(lv)
     if oldText = newText
       return
     ClipHistory_Modify(oldText, newText, lv.ClipHistory)
@@ -122,7 +134,7 @@ ApplyFilter(lv, keyword := lv.FilterEdit.Value, oldValue := Max(lv.ud.Value, 1))
   lv.pageEdit.Opt((range = 1 ? "-" : "+") "Tabstop")
   lv.ud.Opt("Range" range "-1 Disabled" (range = 1))
   lv.ud.Value := Min(range, oldValue)
-  (lv.ud.Value = oldValue || lv.id = -1) ? ShowFiltered(lv) : ""
+  (lv.ud.Value = oldValue) ? ShowFiltered(lv) : ""
 }
 
 ShowFiltered(lv, start := lv.row * lv.page + 1) {
