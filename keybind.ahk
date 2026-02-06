@@ -319,12 +319,14 @@ m::d
 
 #SuspendExempt true
 vk1c & F24::
-vk1d & F24::return
+vk1d & F24::
+Delete & F24::return
 *vk1d Up::SendEvent(A_PriorKey = "" ? "{Blind}{Enter}" : "")
 *vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
+*Delete Up::(A_PriorKey != "Delete" ? "" :
+        (SendEvent("{Blind}" (SandS ? "{Shift Up}" : (IME ? "{vk1c}" : "{Space}")))
+           ModeChange(SandS, !SandS && !!IME)))
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
-*Delete::(Layer(, SandS ? "{Shift Up}" : WithKey("{vk1c}", "{Space}", "Space"))
-  A_PriorKey = "Delete" ? ModeChange(SandS, !SandS && WithKey(1, IME, "Space")) : "")
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
