@@ -80,7 +80,7 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   filterEdit := MyGui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (*) => ApplyFilter(lv))
-  lv := MyGui.AddListView(theme " wp Checked -Hdr h" row * 19.1, [""])
+  lv := MyGui.AddListView(theme " wp Checked -Hdr h" 4 + 19 * row, [""])
   lv.OnEvent("ItemCheck", (*) => ((A_Clipboard := GetFocusItem(lv)) MyGui.Hide()))
   lv.OnEvent("ItemFocus", (*) => (timer((*) => ShowItem(lv, viewEdit), -100)))
   lv.OnEvent("ContextMenu", (*) => ModifyItem(lv))
@@ -107,7 +107,7 @@ ShowClipHistory() {
     if (hwnd != lv.Hwnd)
       return 0
   }
-  lv := isSet(lv) && lv.MyGui ? lv : ClipHistoryLV_Init(40, 18)
+  lv := isSet(lv) && lv.MyGui ? lv : ClipHistoryLV_Init(30, 18)
   lv.Focus()
   ApplyFilter(lv)
   lv.MyGui.Show()
