@@ -11,7 +11,7 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   ClipHistory_Modify(text, "", ClipHistory)
   ClipHistory.InsertAt(1, [time, text])
   FileAppend(time "|" Base64Encode(text) "`n", path, "UTF-8")
-  if Substr(text, 1, 17) = "https://www.youtu" {
+  if Substr(text, 1, 8) = "https://" && InStr(text, "youtu") {
     try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
   } else
     TryRunEgaroucid(text)
@@ -70,11 +70,22 @@ ClipHistory_Modify(oldText, newText, ClipHistory, index := 1, start := 1) {
 }
 
 ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
-  ClipHistory := ClipChanged("Call Init")
+  static MyGui, lv, ClipHistory := ClipChanged("Call Init")
+  OnMessage(0x0006, WM_ACTIVATE)
+  WM_ACTIVATE(wp, lp, msg, hwnd) {
+    if (wp = 0)
+      MyGui.Hide()
+  }
+  OnMessage(0x007B, PreventContextMenu)
+  PreventContextMenu(wParam, lParam, msg, hwnd) {
+    if (hwnd != lv.Hwnd)
+      return 0
+  }
   timer := (f, time) => ((id := ++lv.id) SetTimer((*) => id = lv.id ? f() : "", time))
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
   MyGui.OnEvent("Close", (*) => (lv.MyGui := false))
+  ; MyGui.OnEvent("Deactivate", (*) => MyGui.Hide())
   MyGui.OnEvent("Escape", (*) =>
     ControlGetFocus("A") = lv.Hwnd ? MyGui.Hide() : lv.Focus())
   filterEdit := MyGui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
@@ -103,11 +114,6 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
 
 ShowClipHistory() {
   static lv
-  OnMessage(0x007B, PreventContextMenu)
-  PreventContextMenu(wParam, lParam, msg, hwnd) {
-    if (hwnd != lv.Hwnd)
-      return 0
-  }
   lv := isSet(lv) && lv.MyGui ? lv : ClipHistoryLV_Init(30, 18)
   lv.viewEdit.Text := ""
   ApplyFilter(lv)
