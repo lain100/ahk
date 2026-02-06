@@ -82,7 +82,7 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   filterEdit.OnEvent("Change", (*) => ApplyFilter(lv))
   lv := MyGui.AddListView(theme " wp Checked -Hdr h" 4 + 19 * row, [""])
   lv.OnEvent("ItemCheck", (*) => ((A_Clipboard := GetFocusItem(lv)) MyGui.Hide()))
-  lv.OnEvent("ItemFocus", (*) => (timer((*) => ShowItem(lv, viewEdit), -100)))
+  lv.OnEvent("ItemFocus", (*) => (timer((*) => ShowFocusItem(lv), -100)))
   lv.OnEvent("ContextMenu", (*) => ModifyItem(lv))
   viewEdit := MyGui.AddEdit(theme " ym wp hp+80 -Tabstop -VScroll")
   viewEdit.SetFont("s12", "Consolas")
@@ -95,8 +95,9 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   ud := MyGui.AddUpDown("Wrap")
   ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  Assign(lv, {row: row, page: 0, id: 0, ud:ud, pageEdit: pageEdit, MyGui: MyGui,
-              filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: []})
+  Assign(lv, {row: row, page: 0, id: 0, ud:ud, pageEdit: pageEdit, viewEdit: viewEdit,
+      MyGui: MyGui, filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: []})
+  lv.focus()
   return lv
 }
 
@@ -108,7 +109,7 @@ ShowClipHistory() {
       return 0
   }
   lv := isSet(lv) && lv.MyGui ? lv : ClipHistoryLV_Init(30, 18)
-  lv.Focus()
+  lv.viewEdit.Text := ""
   ApplyFilter(lv)
   lv.MyGui.Show()
   try WinSetTransParent(200, lv.MyGui.Hwnd)
@@ -118,13 +119,20 @@ GetFocusItem(lv) => lv.Filtered[lv.row * lv.page + lv.GetNext()][2]
 
 ModifyItem(lv, newText := "") {
   try {
+    targetRow := lv.GetNext()
     oldText := GetFocusItem(lv)
-    if oldText = newText
-      return
-    ClipHistory_Modify(oldText, newText, lv.ClipHistory)
-    SetTimer((*) => ApplyFilter(lv), newText ? -100 : -1)
-    Tips((newText ? "変更" : "削除") "したよ")
+    if oldText != newText {
+      ClipHistory_Modify(oldText, newText, lv.ClipHistory)
+      Tips((newText ? "変更" : "削除") "したよ")
+    }
+  } catch {
+    targetRow := 1
+    A_Clipboard := newText
+    Sleep(100)
   }
+  ApplyFilter(lv)
+  lv.Modify(targetRow, "Focus Select")
+  ShowFocusItem(lv)
 }
 
 ApplyFilter(lv, keyword := lv.FilterEdit.Value, oldValue := Max(lv.ud.Value, 1)) {
@@ -145,11 +153,11 @@ ShowFiltered(lv, start := lv.row * lv.page + 1) {
   }
 }
 
-ShowItem(lv, viewEdit) {
+ShowFocusItem(lv) {
   try {
     items := lv.Filtered[lv.row * lv.page + lv.GetNext()]
-    viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
-                   . StrReplace(items[2], "`n", "`r`n")
+    lv.viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
+                      . StrReplace(items[2], "`n", "`r`n")
   }
 }
 
