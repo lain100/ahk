@@ -27,7 +27,7 @@ class ClipHistory {
   }
 
   static GetFocusItem(lv) {
-    return this.Filtered[lv.row * (lv.ud.Value - 1) + lv.GetNext()]
+    return this.Filtered[lv.row * (lv.page - 1) + lv.GetNext()]
   }
 
   static IndexOf(text) {
@@ -90,62 +90,89 @@ TryRunEgaroucid(text) {
 }
 
 InitListView(row, height) {
-  static _Gui, lv, theme := "cFFFFFF BackGround202020", API := "ImageList_Create"
   OnMessage(0x0006, WM_ACTIVATE)
-  WM_ACTIVATE(wp, lp, msg, hwnd) {
-    if (wp = 0)
+  OnMessage(0x007B, (*) => 0)
+  OnMessage(0x0100, WM_KEYDOWN)
+  OnMessage(0x020A, WM_MOUSEWHEEL)
+  WM_ACTIVATE(wParam, lParam, msg, hwnd) {
+    if wParam = 0
       _Gui.Hide()
   }
-  OnMessage(0x007B, PreventContextMenu)
-  PreventContextMenu(wParam, lParam, msg, hwnd) {
-    if (hwnd != lv.Hwnd)
-      return 0
+  WM_KEYDOWN(wParam, lParam, msg, hwnd) {
+    if hwnd == lv.Hwnd {
+      Switch wParam {
+        case 0x25: PageNext(lv, -1)
+        case 0x27: PageNext(lv, 1)
+        case 0x2E: SetTargetText(lv) ModifyItem(lv)
+        default:
+          if Some([0x20, 0x0D], val => wParam == val)
+            CopyToClipboard(lv)
+          else if Always([0x23, 0x24, 0x26, 0x28, 0x1B], val => wParam != val)
+            filterEdit.Focus()
+      }
+    } else if hwnd == filterEdit.Hwnd
+        if wParam == 0x0D
+          (lv.Focus() lv.Modify(Max(lv.GetNext(), 1), "Focus Select"))
   }
+  WM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
+    MouseGetPos(,,, &hCtrl, 2)
+    if (hCtrl == lv.Hwnd)
+      PageNext(lv, (wParam << 32 >> 48) > 0 ? -1 : 1)
+  }
+  static _Gui, lv, theme := "cFFFFFF BackGround202020", API := "ImageList_Create"
   _Gui := Gui("+AlwaysOnTop -Caption")
   _Gui.BackColor := "202020"
   _Gui.OnEvent("Close", (*) => (lv._Gui := false))
   _Gui.OnEvent("Escape", (*) => isFocused(lv) ? _Gui.Hide() : lv.Focus())
-  filterEdit := _Gui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
+  filterEdit := _Gui.AddEdit(theme " w750 h34 vFilter -Tabstop -Vscroll -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
-  filterEdit.OnEvent("Change", (*) => ApplyFilterAndShow(lv))
-  lv := _Gui.AddListView(theme " wp Checked -Hdr h" 4 + 19 * row, [""])
-  for event in StrSplit("ItemCheck DoubleClick", " ")
-    lv.OnEvent(event, (*) => (CopyToClipBoard(lv) ReflectionCopyItem(lv)))
+  filterEdit.OnEvent("Change", (*) => FocusItemAt(lv, 1))
+  lv := _Gui.AddListView(theme " wp -Hdr h" 4 + 19 * row, [""])
   lv.OnEvent("ItemFocus", (*) => ShowFocusItem(lv))
-  lv.OnEvent("ContextMenu", (*) => (SetTargetText(lv) ModifyItem(lv)))
-  viewEdit := _Gui.AddEdit(theme " ym wp hp+80 -Tabstop -VScroll")
+  lv.OnEvent("DoubleClick", (*) => CopyToClipBoard(lv))
+  viewEdit := _Gui.AddEdit(theme " ym wp hp+42 -VScroll")
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
   viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyItem(lv, ctrl.Value))
-  pageEdit := _Gui.AddEdit("x350 y+m-32 w40 vPage ReadOnly")
-  pageEdit.OnEvent("Change", (*) => ShowFiltered(lv))
-  ud := _Gui.AddUpDown("Wrap")
   ImgListID := DllCall(API , "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit,
-              pageEdit: pageEdit, ud:ud, row: row, targetText: ""})
-  ApplyFilter(lv)
-  lv.Focus()
+  Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
+                page: 1, range: 1, targetText: ""})
   return lv
 }
 
 ShowClipHistory() {
   static lv
   lv := isSet(lv) && lv._Gui ? lv : InitListView(30, 18)
-  (ClipHistory.Filtered[1][2] != A_Clipboard) ? ReflectionCopyItem(lv) : ""
+  isClipCopied() ? FocusItemAt(lv, 1) : ""
   lv._Gui.Show()
   try WinSetTransParent(200, lv._Gui.Hwnd)
 }
 
 isFocused := (lv) => ControlGetFocus("A") = lv.Hwnd
 
+isClipCopied() {
+  try
+    return ClipHistory.Filtered[1][2] != A_Clipboard
+  catch
+    return true
+}
+
 CopyToClipboard := (lv) => ((A_Clipboard := GetFocusItem(lv)) lv._Gui.Hide())
 
-ReflectionCopyItem := (lv) => (ApplyFilterAndShow(lv) lv.Modify(1, "Focus Select"))
-
-ApplyFilterAndShow := (lv) => (ApplyFilter(lv) ShowFiltered(lv))
+FocusItemAt := (lv, row) =>
+  (ApplyFilter(lv) lv.Modify(row, "Focus Select") ShowFocusItem(lv))
 
 SetTargetText := (lv) => (lv.targetText := GetFocusItem(lv))
+
+PageNext(lv, val) {
+  if lv.range = 1
+    return
+  lv.page := Mod(lv.range + lv.page - 1 + Mod(val, lv.range), lv.range) + 1
+  ShowFiltered(lv)
+  lv.Modify(1, "Focus Select")
+  ShowFocusItem(lv)
+}
 
 GetFocusItem(lv) {
   try {
@@ -168,25 +195,22 @@ ModifyItem(lv, newText := "") {
     }
   } catch {
     targetRow := 1
-    lv.ud.Value := 1
+    lv.page := 1
     A_Clipboard := newText
     Sleep(100)
   }
-  ApplyFilterAndShow(lv)
-  lv.Modify(targetRow, "Focus Select")
+  (lv.targetText != newText) ? FocusItemAt(lv, targetRow) : ShowFocusItem(lv)
   lv.targetText := ""
-  ShowFocusItem(lv)
+  
 }
 
 ApplyFilter(lv) {
   ClipHistory.ApplyFilter(lv.FilterEdit.Value)
-  range := Max(Ceil(ClipHistory.Filtered.Length / lv.row), 1)
-  lv.pageEdit.Opt((range = 1 ? "-" : "+") "Tabstop")
-  lv.ud.Opt("Range" range "-1 Disabled" (range = 1))
-  lv.ud.Value := 1
+  ShowFiltered(lv)
+  Assign(lv, {page: 1, range: Max(Ceil(ClipHistory.Filtered.Length / lv.row), 1)})
 }
 
-ShowFiltered(lv, end := lv.row * lv.ud.Value) {
+ShowFiltered(lv, end := lv.row * lv.page) {
   try {
     lv.Delete()
     lv.viewEdit.Text := ""
@@ -197,7 +221,7 @@ ShowFiltered(lv, end := lv.row * lv.ud.Value) {
 
 ShowFocusItem(lv) {
   try {
-    if !isFocused(lv)
+    if ControlGetFocus("A") == lv.viewEdit.Hwnd
       return
     item := ClipHistory.GetFocusItem(lv)
     lv.viewEdit.Text := formatTime(item[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
@@ -215,6 +239,13 @@ Filter(arr, fn, newArr := []) {
   for item in arr
     fn(item) ? newArr.Push(item) : ""
   return newArr
+}
+
+Some(arr, fn) {
+  for item in arr
+    if fn(item) == true
+      return true
+  return false
 }
 
 Always(arr, fn) {
