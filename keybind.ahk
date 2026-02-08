@@ -2,15 +2,81 @@
 #SingleInstance force
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0, path := "clip_history"
+IME := -1, SandS := 0, IPA := 0
+ClipHistory.Init()
+
+class ClipHistory {
+  static _ClipHistory := [], Filtered := [], path := "clip_history"
+
+  static Init() {
+    acc := ""
+    for line in StrSplit(FileOpen(this.path, "rw").Read(), "`n", "`r") {
+      if line = "" {
+        if acc = ""
+          continue
+        item := StrSplit(acc, "|")
+        this._ClipHistory.InsertAt(1, [item[1], Base64Decode(item[2])])
+        acc := ""
+      } else
+        acc .= line
+    }
+  }
+
+  static ApplyFilter(keyword) {
+    this.Filtered := keyword = "" ? this._ClipHistory.Clone() :
+         Filter(this._ClipHistory, item => Instr(item[2], keyword))
+  }
+
+  static GetFocusItem(lv) {
+    return this.Filtered[lv.row * (lv.ud.Value - 1) + lv.GetNext()]
+  }
+
+  static IndexOf(text) {
+    for index, item in this._ClipHistory
+      if item[2] = text
+        return index
+  }
+
+  static InsertAt(index, item) {
+    this._ClipHistory.InsertAt(index, item)
+  }
+
+  static Modify(targetText, newText := "", index := 1, start := 1) {
+    targetIndex := this.IndexOf(targetText)
+    if !targetIndex
+      return
+    targetFileIndex := this._ClipHistory.Length - targetIndex + 1
+    if newText {
+      time := this._ClipHistory[targetIndex][1]
+      this._ClipHistory[targetIndex][2] := newText
+    } else
+      this._ClipHistory.RemoveAt(targetIndex)
+    ClipHistoryCodes := StrSplit(FileRead(this.path), "`n", "`r")
+    for end, line in ClipHistoryCodes {
+      if line
+        continue
+      if index = targetFileIndex {
+        ClipHistoryCodes.RemoveAt(start, end - start + 1)
+        newText ? ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
+        FileOpen(this.path, "w").Write(Join(ClipHistoryCodes, "`n"))
+        return
+      }
+      index++
+      start := end + 1
+    }
+  }
+
+  static FileAppend(time, text) {
+    FileAppend(time "|" Base64Encode(text) "`n", this.path, "UTF-8")
+  }
+}
 
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
-  static ClipHistory := ClipHistory_Init()
   if type != 1
-    return ClipHistory
-  ClipHistory_Modify(text, "", ClipHistory)
+    return
+  ClipHistory.Modify(text)
   ClipHistory.InsertAt(1, [time, text])
-  FileAppend(time "|" Base64Encode(text) "`n", path, "UTF-8")
+  ClipHistory.FileAppend(time, text)
   if Substr(text, 1, 8) = "https://" && InStr(text, "youtu") {
     try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
   } else
@@ -24,53 +90,8 @@ TryRunEgaroucid(text) {
     try Run("C:\Program Files\Egaroucid_7_8_0\" app)
 }
 
-ClipHistory_Init(acc := "", ClipHistory := []) {
-  for line in StrSplit(FileOpen(path, "rw").Read(), "`n", "`r") {
-    if line = "" {
-      if acc = ""
-        continue
-      item := StrSplit(acc, "|")
-      ClipHistory.InsertAt(1, [item[1], Base64Decode(item[2])])
-      acc := ""
-    } else
-      acc .= line
-  }
-  return ClipHistory
-}
-
-ClipHistory_IndexOf(text, ClipHistory) {
-  for index, item in ClipHistory
-    if text = item[2]
-      return index
-}
-
-ClipHistory_Modify(targetText, newText, ClipHistory, index := 1, start := 1) {
-  targetIndex := ClipHistory_IndexOf(targetText, ClipHistory)
-  if !targetIndex
-    return
-  targetFileIndex := ClipHistory.Length - targetIndex + 1
-  if newText {
-    time := ClipHistory[targetIndex][1]
-    ClipHistory[targetIndex][2] := newText
-  } else
-    ClipHistory.RemoveAt(targetIndex)
-  ClipHistoryCodes := StrSplit(FileRead(path), "`n", "`r")
-  for end, line in ClipHistoryCodes {
-    if line
-      continue
-    if index = targetFileIndex {
-      ClipHistoryCodes.RemoveAt(start, end - start + 1)
-      newText ? ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
-      FileOpen(path, "w").Write(Join(ClipHistoryCodes, "`n"))
-      return
-    }
-    index++
-    start := end + 1
-  }
-}
-
-ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
-  static MyGui, lv, ClipHistory := ClipChanged("Call Init")
+InitClipHistory(row, height, theme := "cFFFFFF BackGround202020") {
+  static MyGui, lv
   OnMessage(0x0006, WM_ACTIVATE)
   WM_ACTIVATE(wp, lp, msg, hwnd) {
     if (wp = 0)
@@ -81,7 +102,8 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
     if (hwnd != lv.Hwnd)
       return 0
   }
-  ImageListID := DllCall("ImageList_Create", "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
+  ImageListID := DllCall( "ImageList_Create", "Int", 1, "Int", height,
+                                "UInt", 0x18, "Int", 1, "Int", 1)
   MyGui := Gui("+AlwaysOnTop -Caption")
   MyGui.BackColor := "202020"
   MyGui.OnEvent("Close", (*) => (lv.MyGui := false))
@@ -103,39 +125,37 @@ ClipHistoryLV_Init(row, height, theme := "cFFFFFF BackGround202020") {
   ud := MyGui.AddUpDown("Wrap")
   SendMessage(0x1003, 1, ImageListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {row: row, ud:ud, pageEdit: pageEdit, viewEdit: viewEdit, MyGui: MyGui,
-              filterEdit: filterEdit, ClipHistory: ClipHistory, Filtered: [],
-              targetText: "", ItemChecked: false})
+              filterEdit: filterEdit, targetText: "", checked: false})
   ApplyFilter(lv)
   lv.Focus()
   return lv
 }
 
+ShowClipHistory() {
+  static lv
+  lv := isSet(lv) && lv.MyGui ? lv : InitClipHistory(30, 18)
+  (lv.checked ? ReflectionCopyItem(lv) : "")
+  lv.MyGui.Show()
+  try WinSetTransParent(200, lv.MyGui.Hwnd)
+}
+
 isFocused := (lv) => ControlGetFocus("A") = lv.Hwnd
 
 CopyToClipboard := (lv) =>
-  ((lv.ItemChecked := true) (A_Clipboard := GetFocusItem(lv)) lv.MyGui.Hide())
+  ((lv.checked := true) (A_Clipboard := GetFocusItem(lv)) lv.MyGui.Hide())
 
 ReflectionCopyItem := (lv) =>
-  ((lv.ItemChecked := false) ApplyFilterAndShow(lv) lv.Modify(1, "Focus Select"))
+  ((lv.checked := false) ApplyFilterAndShow(lv) lv.Modify(1, "Focus Select"))
 
 ApplyFilterAndShow := (lv) => (ApplyFilter(lv) ShowFiltered(lv))
 
 SetTargetText := (lv) => (lv.targetText := GetFocusItem(lv))
 
-ShowClipHistory() {
-  static lv
-  lv := isSet(lv) && lv.MyGui ? lv : ClipHistoryLV_Init(30, 18)
-  (lv.ItemChecked ? ReflectionCopyItem(lv) : "")
-  lv.MyGui.Show()
-  try WinSetTransParent(200, lv.MyGui.Hwnd)
-}
-
 GetFocusItem(lv) {
   try {
-    index := lv.GetNext()
-    if !index
+    if lv.GetNext() = 0
       throw
-    text := lv.Filtered[lv.row * (lv.ud.Value - 1) + index][2]
+    text := ClipHistory.GetFocusItem(lv)[2]
   } catch
     text := ""
   return text
@@ -143,13 +163,11 @@ GetFocusItem(lv) {
 
 ModifyItem(lv, newText := "") {
   try {
-    if lv.targetText = ""
-      throw
     targetRow := lv.GetNext()
-    if !targetRow
+    if targetRow = 0 || lv.targetText = ""
       throw
     if lv.targetText != newText {
-      ClipHistory_Modify(lv.targetText, newText, lv.ClipHistory)
+      ClipHistory.Modify(lv.targetText, newText)
       Tips((newText ? "変更" : "削除") "したよ")
     }
   } catch {
@@ -164,10 +182,9 @@ ModifyItem(lv, newText := "") {
   ShowFocusItem(lv)
 }
 
-ApplyFilter(lv, keyword := lv.FilterEdit.Value) {
-  lv.Filtered := keyword ? Filter(lv.ClipHistory, items => Instr(items[2], keyword))
-                         : lv.ClipHistory.clone()
-  range := Max(Ceil(lv.Filtered.Length / lv.row), 1)
+ApplyFilter(lv) {
+  ClipHistory.ApplyFilter(lv.FilterEdit.Value)
+  range := Max(Ceil(ClipHistory.Filtered.Length / lv.row), 1)
   lv.pageEdit.Opt((range = 1 ? "-" : "+") "Tabstop")
   lv.ud.Opt("Range" range "-1 Disabled" (range = 1))
   lv.ud.Value := 1
@@ -176,9 +193,9 @@ ApplyFilter(lv, keyword := lv.FilterEdit.Value) {
 ShowFiltered(lv, start := lv.row * (lv.ud.Value - 1) + 1) {
   try {
     lv.Delete()
-    for items in Slice(lv.Filtered, start, start + lv.row - 1)
-      lv.Add("", items[2])
     lv.viewEdit.Text := ""
+    for item in Slice(ClipHistory.Filtered, start, start + lv.row - 1)
+      lv.Add("", item[2])
   }
 }
 
@@ -186,9 +203,9 @@ ShowFocusItem(lv) {
   try {
     if !isFocused(lv)
       return
-    items := lv.Filtered[lv.row * (lv.ud.Value - 1) + lv.GetNext()]
-    lv.viewEdit.Text := formatTime(items[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
-                      . StrReplace(items[2], "`n", "`r`n")
+    item := ClipHistory.GetFocusItem(lv)
+    lv.viewEdit.Text := formatTime(item[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
+                      . StrReplace(item[2], "`n", "`r`n")
   }
 }
 
@@ -362,9 +379,10 @@ vk1d & F24::
 Delete & F24::return
 *vk1d Up::SendEvent(A_PriorKey = "" ? "{Blind}{Enter}" : "")
 *vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
-*Delete Up::(A_PriorKey != "Delete" ? "" :
-        (SendEvent("{Blind}" (SandS ? "{Shift Up}" : (IME ? "{vk1c}" : "{Space}")))
-           ModeChange(SandS, !SandS && !!IME)))
+*Delete Up::A_PriorKey = "Delete" && (
+  SendEvent("{Blind}" (SandS ? "{Shift Up}" :
+    (IME = -1 ? Prim("{vkf2}{vkf3}", "L") : "") (IME = 1 ? "{vk1c}" : "{Space}")))
+  ModeChange(SandS, !SandS && (IME = 1)))
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
 
 #SuspendExempt false
