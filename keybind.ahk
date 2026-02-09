@@ -90,25 +90,29 @@ TryRunEgaroucid(text) {
 }
 
 InitListView(row, height) {
-  OnMessage(0x0006, WM_ACTIVATE)
+  OnMessage(0x0006, (wParam, *) => wParam = 0 ? _Gui.Hide() : "")
   OnMessage(0x007B, (*) => 0)
   OnMessage(0x0100, WM_KEYDOWN)
+  OnMessage(0x0102, WM_CHAR)
   OnMessage(0x020A, WM_MOUSEWHEEL)
-  WM_ACTIVATE(wParam, lParam, msg, hwnd) {
-    if wParam = 0
-      _Gui.Hide()
+  WM_CHAR(wParam, lParam, msg, hwnd) {
+    if hwnd == lv.Hwnd {
+      filterEdit.Focus()
+      SendEvent(Chr(wParam))
+      return 0
+    }
   }
   WM_KEYDOWN(wParam, lParam, msg, hwnd) {
     if hwnd == lv.Hwnd {
       Switch wParam {
+        case 0x09: (viewEdit.Text := "") viewEdit.Focus()
+        case 0x0D: CopyToClipboard(lv)
         case 0x25: PageNext(lv, -1)
         case 0x27: PageNext(lv, 1)
         case 0x2E: SetTargetText(lv) ModifyItem(lv)
         default:
-          if Some([0x20, 0x0D], val => wParam == val)
-            CopyToClipboard(lv)
-          else if Always([0x23, 0x24, 0x26, 0x28, 0x1B], val => wParam != val)
-            filterEdit.Focus()
+          if Some([0x10, 0x11, 0x12, 0x5D], val => wParam == val)
+            return 0
       }
     } else if hwnd == filterEdit.Hwnd {
       targetRow := lv.GetNext()
@@ -134,7 +138,9 @@ InitListView(row, height) {
   _Gui.OnEvent("Escape", (*) => isFocused(lv) ? _Gui.Hide() : lv.Focus())
   filterEdit := _Gui.AddEdit(theme " w750 h34 vFilter -Tabstop -Vscroll -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
-  filterEdit.OnEvent("Change", (*) => (ApplyFilter(lv) FocusItemAt(lv, 1)))
+  filterEdit.OnEvent("Change", (*) => (
+    (targetRow := lv.GetNext()) ApplyFilter(lv)
+    FocusItemAt(lv, Max(Min(targetRow, ClipHistory.Filtered.Length), 1))))
   lv := _Gui.AddListView(theme " wp -Hdr h" 4 + 19 * row, [""])
   lv.OnEvent("ItemFocus", (*) => ShowFocusItem(lv))
   lv.OnEvent("DoubleClick", (*) => CopyToClipBoard(lv))
@@ -145,7 +151,7 @@ InitListView(row, height) {
   ImgListID := DllCall(API , "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
-                page: 1, range: 1, targetText: ""})
+              page: 1, range: 1, targetText: ""})
   ApplyFilter(lv) 
   FocusItemAt(lv, 1)
   return lv
@@ -200,7 +206,7 @@ ModifyItem(lv, newText := "") {
       throw
     if lv.targetText != newText {
       ClipHistory.Modify(lv.targetText, newText)
-      Tips((newText ? "変更" : "削除") "したよ")
+      Tips((newText ? "保存" : "削除") "したよ")
     }
   } catch {
     targetRow := 1
