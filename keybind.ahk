@@ -30,6 +30,7 @@ class ClipHistory {
     index := this.Filtered.Length - (lv.row * (lv.page - 1) + lv.GetNext()) + 1
     return this.Filtered[index]
   }
+
   static CopiedNewly() {
     return this.Filtered[this.Filtered.Length][2] != A_Clipboard
   }
@@ -79,17 +80,14 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
   ClipHistory.FileAppend(time, text)
-  if Substr(text, 1, 8) = "https://" && InStr(text, "youtu") {
-    try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
-  } else
-    TryRunEgaroucid(text)
-  Tips("コピーしたよ")
-}
-
-TryRunEgaroucid(text) {
   static app := "Egaroucid_7_8_0_SIMD.exe", board := StrSplit("f5 f4 d3 g6", " ")
-  if !WinExist("ahk_exe " app) && Always(board, pos => InStr(text, pos))
-    try Run("C:\Program Files\Egaroucid_7_8_0\" app)
+  switch {
+    case Substr(text, 1, 8) = "https://" && InStr(text, "youtu"):
+      try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
+    case !WinExist("ahk_exe " app) && Always(board, pos => InStr(text, pos)):
+      try Run("C:\Program Files\Egaroucid_7_8_0\" app)
+  }
+  Tips("コピーしたよ")
 }
 
 InitListView(row, height) {
@@ -106,32 +104,33 @@ InitListView(row, height) {
     }
   }
   WM_KEYDOWN(wParam, lParam, msg, hwnd) {
-    if hwnd == lv.Hwnd {
-      Switch wParam {
-        case 0x09: (viewEdit.Text := "") viewEdit.Focus()
-        case 0x0D: CopyToClipboard(lv)
-        case 0x25: PageNext(lv, -1)
-        case 0x27: PageNext(lv, 1)
-        case 0x2E: SetTargetText(lv) ModifyItem(lv)
-        default:
-          if Some([0x10, 0x11, 0x12, 0x5D], val => wParam == val)
-            return 0
-      }
-    } else if hwnd == filterEdit.Hwnd {
-      Switch wParam {
-        case 0x09: (viewEdit.Text := "") viewEdit.Focus()
-                   return 0
-        case 0x0D: lv.Focus() CopyToClipBoard(lv)
-        case 0x26: lv.Focus() SendEvent("{Up}")
-                   return 0
-        case 0x28: lv.Focus() SendEvent("{Down}")
-                   return 0
-      }
+    switch hwnd {
+      case lv.Hwnd:
+        switch wParam {
+          case 0x09: (viewEdit.Text := "") viewEdit.Focus()
+          case 0x0D: CopyToClipboard(lv)
+          case 0x25: PageNext(lv, -1)
+          case 0x27: PageNext(lv, 1)
+          case 0x2E: SetTargetText(lv) ModifyItem(lv)
+          default:
+            if Some([0x10, 0x11, 0x12, 0x5D], val => wParam == val)
+              return 0
+        }
+      case filterEdit.Hwnd:
+        switch wParam {
+          case 0x09: (viewEdit.Text := "") viewEdit.Focus()
+          case 0x0D: lv.Focus() CopyToClipBoard(lv)
+          case 0x26: lv.Focus() SendEvent("{Up}")
+          case 0x28: lv.Focus() SendEvent("{Down}")
+          default:
+            return ""
+        }
+        return 0
     }
   }
   WM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     MouseGetPos(,,, &hCtrl, 2)
-    if (hCtrl == lv.Hwnd)
+    if hCtrl == lv.Hwnd
       PageNext(lv, (wParam << 32 >> 48) > 0 ? -1 : 1)
   }
   static _Gui, lv, filterEdit, viewEdit,
@@ -168,7 +167,7 @@ ShowClipHistory() {
   } 
 }
 
-isFocused := (GuiUI) => ControlGetFocus("A") = GuiUI.Hwnd
+isFocused := (guiObj) => ControlGetFocus("A") = guiObj.Hwnd
 
 CopyToClipboard := (lv) => ((A_Clipboard := GetFocusItem(lv)) lv._Gui.Hide())
 
@@ -193,30 +192,26 @@ GetFocusItem(lv) {
   return text
 }
 
-ModifyItem(lv, newText := "") {
+ModifyItem(lv, newText := "", targetRow := lv.GetNext()) {
   try {
-    targetRow := lv.GetNext()
-    if targetRow = 0 || lv.targetText = ""
-      throw
     if lv.targetText != newText {
-      ClipHistory.Modify(lv.targetText, newText)
+      if targetRow && lv.targetText {
+        ClipHistory.Modify(lv.targetText, newText)
+        ApplyFilter(lv, targetRow)
+        Tips((newText ? "保存" : "削除") "したよ")
+      } else {
+        A_Clipboard := newText
+        SetTimer((*) => ApplyFilter(lv), -100)
+      }
+    } else if ClipHistory.CopiedNewly()
       ApplyFilter(lv, targetRow)
-      Tips((newText ? "保存" : "削除") "したよ")
-    }
-  } catch {
-    lv.page := 1
-    A_Clipboard := newText
-    SetTimer((*) => ApplyFilter(lv), -100)
-  } finally
-    lv.targetText := ""
-  try
-    ClipHistory.CopiedNewly() ? ApplyFilter(lv) : ""
+  }
 }
 
 ApplyFilter(lv, targetRow := 1) {
   ClipHistory.ApplyFilter(lv.FilterEdit.Value)
   len := ClipHistory.Filtered.Length
-  Assign(lv, {page: 1, range: Max(Ceil(len / lv.row), 1)})
+  Assign(lv, {page: 1, range: Max(Ceil(len / lv.row), 1), targetText: ""})
   ShowFiltered(lv)
   lv.Modify(Max(Min(targetRow, len), 1), "Focus Select")
   ShowFocusItem(lv)
