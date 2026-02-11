@@ -129,11 +129,10 @@ InitListView(row, height) {
     if hCtrl == lv.Hwnd
       PageNext(lv, (wParam << 32 >> 48) > 0 ? -1 : 1)
   }
-  static _Gui, lv, filterEdit, viewEdit,
-         theme := "cFFFFFF BackGround202020", API := "ImageList_Create"
+  static _Gui, lv, filterEdit, viewEdit, theme := "cFFFFFF BackGround202020"
   _Gui := Gui("+AlwaysOnTop -Caption")
   _Gui.BackColor := "202020"
-  _Gui.OnEvent("Escape", (*) => isFocused(viewEdit) ? FilterEdit.Focus() : _Gui.Hide())
+  _Gui.OnEvent("Escape", (*) => isFocused(viewEdit) ? filterEdit.Focus() : _Gui.Hide())
   filterEdit := _Gui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (*) => ApplyFilter(lv, lv.GetNext()))
@@ -144,7 +143,7 @@ InitListView(row, height) {
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
   viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyTargetItem(lv, ctrl.Value))
-  ImgListID := DllCall(API , "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
+  ImgListID := DllCall("ImageList_Create" , "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
               page: 1, range: 1, targetText: ""})
@@ -167,17 +166,22 @@ CopyToClipboard := (lv) => ((A_Clipboard := GetFocusItem(lv)) lv._Gui.Hide())
 
 SetTargetText := (lv) => (lv.targetText := GetFocusItem(lv))
 
+Circulation := (cur, dir, len) => Mod(len + cur - 1 + Mod(dir, len), len) + 1
+
+LVGetLength := (lv) =>
+  Max(Min(ClipHistory.Filtered.Length - lv.row * (lv.page - 1), lv.row), 1)
+
 ChangeFocusItem(lv, dir) {
   if GetKeyState("Shift", "L") {
     PageNext(lv, dir)
     return true
   } else {
-    len := Max(Min(ClipHistory.Filtered.Length - lv.row * (lv.page - 1), lv.row), 1)
+    len := LVGetLength(lv)
     cur := lv.GetNext()
-    pos := Mod(len + cur - 1 + Mod(dir, len), len) + 1
-    if pos = 1 || pos = len {
+    row := Circulation(cur, dir, len)
+    if row = 1 || row = len {
       lv.Modify(cur, "-Focus -Select")
-      lv.Modify(pos, "Focus Select")
+      lv.Modify(row, "Focus Select")
       ShowFocusItem(lv)
       return true
     }
@@ -185,13 +189,12 @@ ChangeFocusItem(lv, dir) {
   return false
 }
 
-PageNext(lv, val, targetRow := lv.GetNext()) {
+PageNext(lv, dir, targetRow := lv.GetNext()) {
   if lv.range = 1
     return
-  lv.page := Mod(lv.range + lv.page - 1 + Mod(val, lv.range), lv.range) + 1
+  lv.page := Circulation(lv.page, dir, lv.range)
   ShowFiltered(lv)
-  len := Max(Min(ClipHistory.Filtered.Length - lv.row * (lv.page - 1), lv.row), 1)
-  lv.Modify(Max(Min(targetRow, len), 1), "Focus Select")
+  lv.Modify(Max(Min(targetRow, LVGetLength(lv)), 1), "Focus Select")
   ShowFocusItem(lv)
 }
 
@@ -199,10 +202,9 @@ GetFocusItem(lv) {
   try {
     if lv.GetNext() = 0
       throw
-    text := ClipHistory.GetFocusItem(lv)[2]
+    return ClipHistory.GetFocusItem(lv)[2]
   } catch
-    text := ""
-  return text
+    return ""
 }
 
 ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext()) {
