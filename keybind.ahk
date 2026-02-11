@@ -6,7 +6,7 @@ IME := -1, SandS := 0, IPA := 0
 ClipHistory.Init()
 
 class ClipHistory {
-  static _ClipHistory := [], Filtered := [], path := "clip_history"
+  static _ClipHistory := [], Filtered := [], isChanged := false, path := "clip_history"
 
   static Init(acc := "") {
     for line in StrSplit(FileOpen(this.path, "rw").Read(), "`n", "`r") {
@@ -29,10 +29,6 @@ class ClipHistory {
   static GetFocusItem(lv) {
     index := this.Filtered.Length - (lv.row * (lv.page - 1) + lv.GetNext()) + 1
     return this.Filtered[index]
-  }
-
-  static CopiedNewly() {
-    return this.Filtered[this.Filtered.Length][2] != A_Clipboard
   }
 
   static IndexOf(text) {
@@ -77,6 +73,7 @@ class ClipHistory {
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   if type != 1
     return
+  ClipHistory.isChanged := true
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
   ClipHistory.FileAppend(time, text)
@@ -111,7 +108,7 @@ InitListView(row, height) {
           case 0x0D: CopyToClipboard(lv)
           case 0x25: PageNext(lv, -1)
           case 0x27: PageNext(lv, 1)
-          case 0x2E: SetTargetText(lv) ModifyItem(lv)
+          case 0x2E: SetTargetText(lv) ModifyTargetItem(lv)
           default:
             if Some([0x10, 0x11, 0x12, 0x5D], val => wParam == val)
               return 0
@@ -148,7 +145,7 @@ InitListView(row, height) {
   viewEdit := _Gui.AddEdit(theme " ym wp hp+42 -VScroll")
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
-  viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyItem(lv, ctrl.Value))
+  viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyTargetItem(lv, ctrl.Value))
   ImgListID := DllCall(API , "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
   Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
@@ -192,19 +189,18 @@ GetFocusItem(lv) {
   return text
 }
 
-ModifyItem(lv, newText := "", targetRow := lv.GetNext()) {
+ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext()) {
   try {
     if lv.targetText != newText {
       if targetRow && lv.targetText {
         ClipHistory.Modify(lv.targetText, newText)
-        ApplyFilter(lv, targetRow)
         Tips((newText ? "保存" : "削除") "したよ")
-      } else {
-        A_Clipboard := newText
-        SetTimer((*) => ApplyFilter(lv), -100)
-      }
-    } else if ClipHistory.CopiedNewly()
-      ApplyFilter(lv, targetRow)
+      } else
+        ((A_Clipboard := newText) (targetRow := 1))
+    } else if !ClipHistory.isChanged
+      return
+    ClipHistory.isChanged := false
+    SetTimer((*) => ApplyFilter(lv, targetRow), targetRow && lv.targetText ? -1 : -100)
   }
 }
 
