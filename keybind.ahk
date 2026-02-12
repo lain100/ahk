@@ -143,11 +143,11 @@ InitListView(row, height) {
   viewEdit.SetFont("s12", "Consolas")
   viewEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
   viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyTargetItem(lv, ctrl.Value))
-  ImgListID := DllCall("ImageList_Create" , "Int", 1, "Int", height, "UInt", 0x18, "Int", 1, "Int", 1)
+  ImgListID := DllCall("ImageList_Create" , "Int", 1, "Int", height,
+                              "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
-              page: 1, range: 1, targetText: ""})
-  return lv
+  return Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
+                     page: 1, range: 1, targetText: ""})
 }
 
 ShowClipHistory() {
@@ -207,10 +207,11 @@ GetFocusItem(lv) {
     return ""
 }
 
-ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext()) {
+ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 100) {
   try {
     if lv.targetText != newText {
       if targetRow && lv.targetText {
+        time := 1
         ClipHistory.Modify(lv.targetText, newText)
         Tips((newText ? "保存" : "削除") "したよ")
       } else
@@ -218,7 +219,7 @@ ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext()) {
     } else if !ClipHistory.isChanged
       return
     ClipHistory.isChanged := false
-    SetTimer((*) => ApplyFilter(lv, targetRow), targetRow && lv.targetText ? -1 : -100)
+    SetTimer((*) => ApplyFilter(lv, targetRow), -time)
   }
 }
 
@@ -426,12 +427,10 @@ m::d
 vk1c & F24::
 vk1d & F24::
 Delete & F24::return
-*vk1d Up::(A_PriorKey != "") ? "" :
-  (SendEvent("{Blind}{Enter Down}") Sleep(100) SendEvent("{Blind}{Enter Up}"))
-*vk1c Up::SendEvent(A_PriorKey = "" ? "{Blind}{BackSpace}" : "")
+*vk1d Up::(A_PriorKey = "") && SendEvent("{Blind}{Enter}")
+*vk1c Up::(A_PriorKey = "") && SendEvent("{Blind}{BackSpace}")
 *Delete Up::A_PriorKey = "Delete" && (
-  SendEvent("{Blind}" (SandS ? "{Shift Up}" :
-    (IME = -1 ? Prim("{vkf2}{vkf3}", "L") : "") (IME = 1 ? "{vk1c}" : "{Space}")))
+  SendEvent("{Blind}" (SandS ? "{Shift Up}" : (IME = 1 ? "{vk1c}" : "{Space}")))
   ModeChange(SandS, !SandS && (IME = 1)))
 *Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
 
