@@ -95,10 +95,10 @@ class ClipHistory {
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   if type != 1
     return
-  ClipHistory.isChanged := true
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
   ClipHistory.FileAppend(time, text)
+  ClipHistory.isChanged := true
   Tips("コピーしたよ")
   static app := "Egaroucid_7_8_0_SIMD.exe", board := StrSplit("f5 f4 d3 g6", " ")
   switch {
@@ -201,7 +201,7 @@ ChangeFocusItem(lv, dir) {
     len := LVGetLength(lv)
     cur := lv.GetNext()
     row := Circulation(cur, dir, len)
-    if row = 1 || row = len {
+    if some([1, len], val => row = val) {
       lv.Modify(cur, "-Focus -Select")
       lv.Modify(row, "Focus Select")
       ShowFocusItem(lv)
@@ -380,9 +380,16 @@ Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
 
 WithKey(key := "", cond := "P", items*) {
   for item in items
-    if GetKeyState(item[2], cond)
+    try if GetKeyState(item[2], cond)
       return item[1]
   return key
+}
+
+WithKeyFn(fn, cond := "P", items*) {
+  for item in items
+    try if GetKeyState(item[2], cond)
+      return (SendEvent("{Shift Up}") Mode.Into(false, "SandS") item[1]())
+  fn()
 }
 
 Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
@@ -434,9 +441,7 @@ vk1d & F24::
 Delete & F24::return
 *vk1d Up::(A_PriorKey = "") && SendEvent("{Blind}{Enter}")
 *vk1c Up::(A_PriorKey = "") && SendEvent("{Blind}{BackSpace}")
-*Delete Up::A_PriorKey = "Delete" && (
-  SendEvent(Mode.SandS ? "{Shift Up}" : (Mode.IME == true ? "{vk1c}" : "{Space}"))
-  (Mode.SandS && Mode.Into(false, "SandS")))
+*Delete Up::A_PriorKey = "Delete" && SendEvent(Mode.IME == true ? "{vk1c}" : "{Space}")
 *Space::(Mode.Into(true, "SandS") Layer("Shift", "{Space}") Mode.Into(false, "SandS"))
 
 #SuspendExempt false
@@ -447,9 +452,9 @@ w::[
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::GetKeyState("Space", "P") ? Layer("LWin") : SendEvent("{Blind}(")
-*d::GetKeyState("Space", "P") ? Layer("LAlt") : Arpeggio("'", "'{Left}")
-*f::Arpeggio(")", "){Left}", "s")
+*s::WithKeyFn((*) => SendEvent("{Blind}("),, [(*) => Layer("LWin"), "Space"])
+*d::WithKeyFn((*) => Arpeggio("'", "'{Left}"),, [(*) => Layer("LAlt"), "Space"])
+*f::WithKeyFn((*) => Arpeggio(")", "){Left}", "s"),, [(*) => 0, "Space"])
 g::&
 
 z::`{
@@ -486,8 +491,8 @@ vkBA::End
 *e::Click("WD")
 
 *a::SendEvent(Prim(WithKey("!",, ["", "Space"]) "{PrintScreen}"))
-*s::Layer("Click R")
-*d::Layer("Click")
+*s::Click("R")
+*d::Click
 *f::{
 	Calender := Gui("+AlwaysOnTop -Caption")
 	Calender.AddMonthCal()
