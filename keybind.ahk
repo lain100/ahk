@@ -364,12 +364,12 @@ Layer(key := "", key2 := "", HotKey := GetHotKey()) {
 
 Prim(str, cond := "L") {
   for key in ["Ctrl", "Shift"]
-    str := WithKey(str, "{" key " Up}" str "{" key " Down}", key, cond)
+    str := WithKey(str, cond, ["{" key " Up}" str "{" key " Down}", key])
   return str
 }
 
 Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
-( SendEvent("{Blind}" WithKey(key, key2, trg, cond))
+( SendEvent("{Blind}" WithKey(key, cond, [key2, trg]))
   trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
 
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
@@ -378,8 +378,12 @@ GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
   SendEvent("{Blind}" (trg = GetHotKey(A_PriorHotKey) ? key2 : key))
 
-WithKey(key := "", key2 := "", trg := "", cond := "P") =>
-  trg && GetKeyState(trg, cond) ? key2 : key
+WithKey(key := "", cond := "P", items*) {
+  for item in items
+    if GetKeyState(item[2], cond)
+      return item[1]
+  return key
+}
 
 Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
@@ -469,9 +473,10 @@ vkBA::End
 *n::
 *m::
 *,::
-*.::( Mode.Into(WithKey(WithKey(Mode.IME, false, "n"), true, "m"), "IME")
-      Suspend(WithKey(0, -1, ".")) Mode.Into(WithKey(0, !Mode.IPA, ","), "IPA")
-      SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m")))
+*.::( Suspend(WithKey(false,, [-1, "."]))
+      Mode.Into(WithKey(false,, [!Mode.IPA, ","]), "IPA")
+      Mode.Into(WithKey(Mode.IME,, [false, "n"], [true, "m"]), "IME")
+      SendEvent(WithKey(,, [Prim("{vkf2}{vkf3}"), "n"], [Prim("{vkf2}"), "m"])))
 */::Browser_Home
 
 #SuspendExempt false
@@ -480,7 +485,7 @@ vkBA::End
 *w::Click("WU")
 *e::Click("WD")
 
-*a::SendEvent(Prim(WithKey("!",, "Space") "{PrintScreen}"))
+*a::SendEvent(Prim(WithKey("!",, ["", "Space"]) "{PrintScreen}"))
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
@@ -505,9 +510,9 @@ p::Volume_Up
 *k::
 *l:: {
 	MouseGetPos(&X, &Y)
-	diff := 16 * WithKey(WithKey(1, 1/4, "LCtrl"), 5, "LShift")
-	X += diff * WithKey(WithKey(0, 1, "l"), -1, "h")
-	Y += diff * WithKey(WithKey(0, 1, "j"), -1, "k")
+	diff := 16 * WithKey(1,, [1/4, "LCtrl"], [5, "LShift"])
+	X += diff * WithKey(0,, [1, "l"], [-1, "h"])
+	Y += diff * WithKey(0,, [1, "j"], [-1, "k"])
 	MouseMove(X, Y)
 }
 *`;::Lupine_Attack(GetKeyState("LShift", "P"))
@@ -589,15 +594,15 @@ m::!
 *LControl::Layer("Ctrl", "ə")
 *a::Toggle("e", "{BS}ɛ")
 *s::Toggle("i", "{BS}ɪ")
-*d::Toggle(WithKey("a", "æ", "Ctrl"), WithKey("{BS}ɑ",, "Ctrl"))
+*d::Toggle(WithKey("a",, ["æ", "Ctrl"]), WithKey("{BS}ɑ",, ["", "Ctrl"]))
 *f::Toggle("o", "{BS}ɔ")
-*g::Toggle(WithKey("ː", "ˈ", "Ctrl"), WithKey(, Prim("{BS}ˌ"), "Ctrl", "P"))
+*g::Toggle(WithKey("ː",, ["ˈ", "Ctrl"]), WithKey(,, [Prim("{BS}ˌ"), "Ctrl"]))
 
 *c::Toggle("v", "{BS}ʌ")
 
-*u::Toggle(WithKey("r", "ɚ", "Ctrl"), Prim("{BS}" WithKey("ɹ", "ɝ", "Ctrl"), "P"))
-*o::Toggle(WithKey(WithKey(WithKey("h", "{BS}θ", "j"), "{BS}ʃ", ";"), "{BS}tʃ", "x"),
-           WithKey(WithKey("{BS}" WithKey("ɾ", "ð", "j"),, ";"),, "x"))
+*u::Toggle(WithKey("r",, ["ɚ", "Ctrl"]), Prim("{BS}" WithKey("ɹ",, ["ɝ", "Ctrl"])))
+*o::Toggle(WithKey("h",, ["{BS}θ", "j"], ["{BS}ʃ", ";"], ["{BS}tʃ", "x"]),
+           WithKey("{BS}ɾ",, ["{BS}ð", "j"], ["", ";"], ["", "x"]))
 
 *l::Toggle("k", "{BS}ŋk", "k")
 *vkBA::Toggle("j", "{BS}ʒ")
