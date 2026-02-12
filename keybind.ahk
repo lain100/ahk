@@ -129,6 +129,7 @@ InitListView(row, height) {
         }
       case filterEdit.Hwnd:
         switch wParam {
+          case 0x08: SendEvent(WithKey("{BS}",, ["+^{Left}{BS}", "Ctrl"]))
           case 0x09: (viewEdit.Text := "") viewEdit.Focus()
           case 0x0D: CopyToClipBoard(lv)
           case 0x26: lv.Focus() ChangeFocusItem(lv, -1) ? "" : SendEvent("{Up}")
@@ -385,13 +386,6 @@ WithKey(key := "", cond := "P", items*) {
   return key
 }
 
-WithKeyFn(fn, cond := "P", items*) {
-  for item in items
-    try if GetKeyState(item[2], cond)
-      return (SendEvent("{Shift Up}") Mode.Into(false, "SandS") item[1]())
-  fn()
-}
-
 Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
@@ -399,9 +393,14 @@ Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
   Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
 
-for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift Lwin LAlt RAlt", " ")
+for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
+#HotIf GetKeyState("Space", "P")
+g::$
+*v::SendEvent(Prim("."))
+
+#HotIf
 w::l
 e::u
 r::f
@@ -410,12 +409,13 @@ a::e
 s::i
 d::a
 f::o
-*g::Toggle("-", "$", "Space")
+g::-
 
+*LShift::Layer(GetHotKey() = GetHotKey(A_PriorHotKey) ? "LWin" : "Shift")
 z::x
 x::c
 c::v
-*v::Toggle(",", Prim("."), "Space")
+v::,
 
 u::r
 i::y
@@ -444,6 +444,39 @@ Delete & F24::return
 *Delete Up::A_PriorKey = "Delete" && SendEvent(Mode.IME == true ? "{vk1c}" : "{Space}")
 *Space::(Mode.Into(true, "SandS") Layer("Shift", "{Space}") Mode.Into(false, "SandS"))
 
+#HotIf GetKeyState("Space", "P") && GetKeyState("vk1c", "P")
+*q::~
+*w::SendEvent(Prim("1"))
+*e::SendEvent(Prim("2"))
+*r::SendEvent(Prim("3"))
+
+*a::SendEvent(Prim("0"))
+*s::SendEvent(Prim("4"))
+*d::SendEvent(Prim("5"))
+*f::SendEvent(Prim("6"))
+
+*z::SendEvent(Prim("7"))
+*x::SendEvent(Prim("8"))
+*c::SendEvent(Prim("9"))
+
+u::<
+i::=
+*o::Arpeggio(">", Prim(">{Left}"), "u")
+*p::SendEvent(Prim("\"))
+
+*h::SendEvent(Prim("{^}"))
+j::+
+*k::SendEvent(Prim("-"))
+l::*
+*;::SendEvent(Prim("/"))
+vkBA::%
+
+n::_
+m::!
+,::?
+*.::SendEvent(Prim(":"))
+*/::SendEvent(Prim(";"))
+
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
 q::@
@@ -452,9 +485,9 @@ w::[
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::WithKeyFn((*) => SendEvent("{Blind}("),, [(*) => Layer("LWin"), "Space"])
-*d::WithKeyFn((*) => Arpeggio("'", "'{Left}"),, [(*) => Layer("LAlt"), "Space"])
-*f::WithKeyFn((*) => Arpeggio(")", "){Left}", "s"),, [(*) => 0, "Space"])
+*s::SendEvent("{Blind}(")
+*d::Arpeggio("'", "'{Left}")
+*f::Arpeggio(")", "){Left}", "s")
 g::&
 
 z::`{
@@ -559,44 +592,12 @@ m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 ,::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 .::Run("https://jmh-tms2.azurewebsites.net/schoolsystem/")
 
-#HotIf GetKeyState("Space", "P") && !Mode.SandS
-q::~
-w::1
-e::2
-r::3
-
-a::0
-s::4
-d::5
-f::6
-
-z::7
-x::8
-c::9
-
-u::<
-i::=
-*o::Arpeggio(">", ">{Left}", "u")
-p::\
-
-h::^
-j::+
-k::-
-l::*
-`;::/
-vkBA::%
-
-n::_
-m::!
-,::?
-.:::
-/::;
-
 #HotIf Mode.IPA
 *w::Toggle("l", "{BS}ɫ")
 *e::Toggle("u", "{BS}ʊ")
 
 *LControl::Layer("Ctrl", "ə")
+
 *a::Toggle("e", "{BS}ɛ")
 *s::Toggle("i", "{BS}ɪ")
 *d::Toggle(WithKey("a",, ["æ", "Ctrl"]), WithKey("{BS}ɑ",, ["", "Ctrl"]))
