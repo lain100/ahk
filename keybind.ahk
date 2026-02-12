@@ -2,8 +2,30 @@
 #SingleInstance force
 OnClipboardChange ClipChanged
 
-IME := -1, SandS := 0, IPA := 0
+Mode.Init()
 ClipHistory.Init()
+
+class Mode {
+  static Label := "", IME := -1, SandS := false, IPA := false
+
+  static Init() {
+    _Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
+    _Gui.BackColor := "202020"
+    this.Label := _Gui.AddText("cFFFFFF x20 y20 w200 h80")
+    this.Label.SetFont("s11", "Segoe UI")
+    _Gui.Show("y200 w100 h100 NA")
+    WinSetExStyle("+0x20", _Gui.Hwnd)
+    WinSetTransParent(128, _Gui.Hwnd)
+  }
+
+  static Into(value, key) {
+    this.%key% := value
+    this.Label.Text := Join([
+      this.IME = -1  ?         "" : ("      " (this.IME ? "あ" : "A")),
+      this.SandS     ?  "  SHIFT" : "",
+      A_isSuspended  ?  "SUSPEND" : (this.IPA ? "     IPA" : "")], "`n")
+  }
+}
 
 class ClipHistory {
   static _ClipHistory := [], Filtered := [], isChanged := false, path := "clip_history"
@@ -77,6 +99,7 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
   ClipHistory.FileAppend(time, text)
+  Tips("コピーしたよ")
   static app := "Egaroucid_7_8_0_SIMD.exe", board := StrSplit("f5 f4 d3 g6", " ")
   switch {
     case Substr(text, 1, 8) = "https://" && InStr(text, "youtu"):
@@ -84,7 +107,6 @@ ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
     case !WinExist("ahk_exe " app) && Always(board, pos => InStr(text, pos)):
       try Run("C:\Program Files\Egaroucid_7_8_0\" app)
   }
-  Tips("コピーしたよ")
 }
 
 InitListView(row, height) {
@@ -322,30 +344,6 @@ CryptStringToBinary(str) {
   return buf
 }
 
-InitMode() {
-  Box := Gui("+AlwaysOnTop -Caption +ToolWindow")
-  Lbl := Box.AddText("cFFFFFF x20 y20 w200 h80")
-  Lbl.SetFont("s11", "Segoe UI")
-  Box.BackColor := "202020"
-  Box.Show("y200 w100 h100 NA")
-  WinSetExStyle("+0x20", Box.Hwnd)
-  WinSetTransParent(128, Box.Hwnd)
-  return Lbl
-}
-
-ModeChange(mode, bool) {
-  static Label := InitMode()
-  global IME := mode = 0 ? bool : IME,
-       SandS := mode = 1 ? bool : SandS,
-         IPA := mode = 2 ? bool : IPA
-  Label.Text := Join([ IME = -1 ?        "" : "   " (IME ? "かな" : "英字"),
-                          SandS ? "  SHIFT" : "",
-                  A_isSuspended ? "SUSPEND" : (IPA ? "    IPA" : "")], "`n")
-}
-
-FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
-  Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
-
 Lupine_Attack(mode := 1) {
   WinGetPos(&X, &Y, &W, &H, "A")
   MouseGetPos(&offsetX, &offsetY)
@@ -364,7 +362,7 @@ Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
 }
 
-Prim(str, cond := "P") {
+Prim(str, cond := "L") {
   for key in ["Ctrl", "Shift"]
     str := WithKey(str, "{" key " Up}" str "{" key " Down}", key, cond)
   return str
@@ -387,6 +385,9 @@ Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
+FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
+  Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
+
 for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab LShift Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
@@ -403,7 +404,7 @@ f::o
 z::x
 x::c
 c::v
-*v::Toggle(",", Prim(".", "L"), "Space")
+*v::Toggle(",", Prim("."), "Space")
 
 u::r
 i::y
@@ -430,9 +431,9 @@ Delete & F24::return
 *vk1d Up::(A_PriorKey = "") && SendEvent("{Blind}{Enter}")
 *vk1c Up::(A_PriorKey = "") && SendEvent("{Blind}{BackSpace}")
 *Delete Up::A_PriorKey = "Delete" && (
-  SendEvent("{Blind}" (SandS ? "{Shift Up}" : (IME = 1 ? "{vk1c}" : "{Space}")))
-  ModeChange(SandS, !SandS && (IME = 1)))
-*Space::(ModeChange(1, 1) Layer("Shift", "{Space}") ModeChange(1, 0))
+  SendEvent(Mode.SandS ? "{Shift Up}" : (Mode.IME == true ? "{vk1c}" : "{Space}"))
+  (Mode.SandS && Mode.Into(false, "SandS")))
+*Space::(Mode.Into(true, "SandS") Layer("Shift", "{Space}") Mode.Into(false, "SandS"))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
@@ -468,10 +469,9 @@ vkBA::End
 *n::
 *m::
 *,::
-*.::( ModeChange(0, WithKey(WithKey(IME, 0, "n"), 1, "m"))
-      Suspend(WithKey(0, -1, ".")) ModeChange(2, WithKey(0, !IPA, ","))
-      SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}", "L"), "n"),
-                                  Prim("{vkf2}", "L"), "m")))
+*.::( Mode.Into(WithKey(WithKey(Mode.IME, false, "n"), true, "m"), "IME")
+      Suspend(WithKey(0, -1, ".")) Mode.Into(WithKey(0, !Mode.IPA, ","), "IPA")
+      SendEvent(WithKey(WithKey(, Prim("{vkf2}{vkf3}"), "n"), Prim("{vkf2}"), "m")))
 */::Browser_Home
 
 #SuspendExempt false
@@ -480,7 +480,7 @@ vkBA::End
 *w::Click("WU")
 *e::Click("WD")
 
-*a::SendEvent(Prim(WithKey("!",, "Space") "{PrintScreen}", "L"))
+*a::SendEvent(Prim(WithKey("!",, "Space") "{PrintScreen}"))
 *s::Layer("Click R")
 *d::Layer("Click")
 *f::{
@@ -549,7 +549,7 @@ m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 ,::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
 .::Run("https://jmh-tms2.azurewebsites.net/schoolsystem/")
 
-#HotIf GetKeyState("Space", "P") && !SandS
+#HotIf GetKeyState("Space", "P") && !Mode.SandS
 q::~
 w::1
 e::2
@@ -582,7 +582,7 @@ m::!
 .:::
 /::;
 
-#HotIf IPA
+#HotIf Mode.IPA
 *w::Toggle("l", "{BS}ɫ")
 *e::Toggle("u", "{BS}ʊ")
 
@@ -591,11 +591,11 @@ m::!
 *s::Toggle("i", "{BS}ɪ")
 *d::Toggle(WithKey("a", "æ", "Ctrl"), WithKey("{BS}ɑ",, "Ctrl"))
 *f::Toggle("o", "{BS}ɔ")
-*g::Toggle(WithKey("ː", "ˈ", "Ctrl"), WithKey(, Prim("{BS}ˌ"), "Ctrl"))
+*g::Toggle(WithKey("ː", "ˈ", "Ctrl"), WithKey(, Prim("{BS}ˌ"), "Ctrl", "P"))
 
 *c::Toggle("v", "{BS}ʌ")
 
-*u::Toggle(WithKey("r", "ɚ", "Ctrl"), Prim("{BS}" WithKey("ɹ", "ɝ", "Ctrl")))
+*u::Toggle(WithKey("r", "ɚ", "Ctrl"), Prim("{BS}" WithKey("ɹ", "ɝ", "Ctrl"), "P"))
 *o::Toggle(WithKey(WithKey(WithKey("h", "{BS}θ", "j"), "{BS}ʃ", ";"), "{BS}tʃ", "x"),
            WithKey(WithKey("{BS}" WithKey("ɾ", "ð", "j"),, ";"),, "x"))
 
