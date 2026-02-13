@@ -6,16 +6,14 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static Label := "", IME := -1, SandS := false, IPA := false
+  static id := 0, IME := -1, SandS := false, IPA := false
 
   static Init() {
-    _Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
-    _Gui.BackColor := "202020"
-    this.Label := _Gui.AddText("cFFFFFF x20 y20 w200 h80")
+    this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
+    this._Gui.BackColor := "202020"
+    this.Label := this._Gui.AddText("cFFFFFF x20 y20 w200 h80")
     this.Label.SetFont("s11", "Segoe UI")
-    _Gui.Show("y200 w100 h100 NA")
-    WinSetExStyle("+0x20", _Gui.Hwnd)
-    WinSetTransParent(128, _Gui.Hwnd)
+    WinSetExStyle("+0x20", this._Gui.Hwnd)
   }
 
   static Into(value, key) {
@@ -24,6 +22,20 @@ class Mode {
       this.IME = -1  ?         "" : ("      " (this.IME ? "あ" : "A")),
       this.SandS     ?  "  SHIFT" : "",
       A_isSuspended  ?  "SUSPEND" : (this.IPA ? "     IPA" : "")], "`n")
+    WinSetTransParent(255, this._Gui.Hwnd)
+    this._Gui.Show("y200 w100 h100 NA")
+    this.SetFadeOut(this._Gui)
+  }
+
+  static SetFadeOut(g, time := 1000, id := ++this.id) {
+    SetTimer((*) => this.FadeOut(g, id), -time)
+  }
+
+  static FadeOut(g, id, alpha := 255, a := Max(alpha - 10, 0)) {
+    if id != this.id
+      return WinSetTransParent(255, g.Hwnd)
+    Settimer((*) =>
+      a ? (WinSetTransparent(a, g.Hwnd) this.FadeOut(g, id, a)) : g.Hide(), -15)
   }
 }
 
@@ -390,9 +402,6 @@ Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-FadeOut(g, alpha := 255, a := Max(alpha - 10, 0)) =>
-  Settimer((*) => a ? (WinSetTransparent(a, g.Hwnd) FadeOut(g, a)) : g.Destroy(), -15)
-
 for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
@@ -527,10 +536,12 @@ vkBA::End
 *s::Click("R")
 *d::Click
 *f::{
-	Calender := Gui("+AlwaysOnTop -Caption")
+	static Calender := Gui("+AlwaysOnTop -Caption")
 	Calender.AddMonthCal()
 	Calender.Show("NA")
-	(SendEvent("{F13}") SetTimer((*) => FadeOut(Calender), -2000))
+  WinSetTransParent(255, Calender.Hwnd)
+  Mode.SetFadeOut(Calender, 2000)
+	SendEvent("{F13}")
 }
 z::!F4
 x::ShowClipHistory
