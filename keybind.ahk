@@ -16,7 +16,7 @@ class Mode {
     WinSetExStyle("+0x20", this._Gui.Hwnd)
   }
 
-  static Into(value, key) {
+  static Into(value, key, oldValue := this.%key%) {
     this.%key% := value
     this.Label.Text := Join([
       this.IME = -1  ?         "" : ("      " (this.IME ? "あ" : "A")),
@@ -25,17 +25,18 @@ class Mode {
     WinSetTransParent(255, this._Gui.Hwnd)
     this._Gui.Show("y200 w100 h100 NA")
     this.SetFadeOut(this._Gui)
+    return value != oldValue
   }
 
-  static SetFadeOut(g, time := 1000, id := ++this.id) {
-    SetTimer((*) => this.FadeOut(g, id), -time)
+  static SetFadeOut(_Gui, time := 1000, id := ++this.id) {
+    SetTimer((*) => this.FadeOut(_Gui, id), -time)
   }
 
-  static FadeOut(g, id, alpha := 255, a := Max(alpha - 10, 0)) {
+  static FadeOut(_Gui, id, alpha := 255) {
     if id != this.id
-      return WinSetTransParent(255, g.Hwnd)
-    Settimer((*) =>
-      a ? (WinSetTransparent(a, g.Hwnd) this.FadeOut(g, id, a)) : g.Hide(), -15)
+      return
+    WinSetTransparent(alpha := Max(alpha - 10, 0), _Gui.Hwnd) 
+    Settimer((*) => alpha ? this.FadeOut(_Gui, id, alpha) : _Gui.Hide(), -15)
   }
 }
 
@@ -141,7 +142,7 @@ InitListView(row, height) {
         }
       case filterEdit.Hwnd:
         switch wParam {
-          case 0x08: SendEvent(WithKey("{BS}",, ["+^{Left}{BS}", "Ctrl"]))
+          case 0x08: SendEvent(WithKey("{BS}", Map("Ctrl", "+^{Left}{BS}")))
           case 0x09: (viewEdit.Text := "") viewEdit.Focus()
           case 0x0D: CopyToClipBoard(lv)
           case 0x26: lv.Focus() ChangeFocusItem(lv, -1) ? "" : SendEvent("{Up}")
@@ -375,28 +376,29 @@ Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
 }
 
-Prim(str, cond := "L") {
-  for key in ["Ctrl", "Shift"]
-    str := WithKey(str, cond, ["{" key " Up}" str "{" key " Down}", key])
-  return str
-}
-
 Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
-( SendEvent("{Blind}" WithKey(key, cond, [key2, trg]))
+( SendEvent("{Blind}" WithKey(key, Map(trg, key2), cond))
   trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
-
-GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
-  InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
 
 Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
   SendEvent("{Blind}" (trg = GetHotKey(A_PriorHotKey) ? key2 : key))
 
-WithKey(key := "", cond := "P", items*) {
-  for item in items
-    try if GetKeyState(item[2], cond)
-      return item[1]
-  return key
+WithKey(initValue := "", mapObj := Map(), cond := "P") {
+  for key, value in mapObj
+    if key && GetKeystate(key, cond)
+      return value
+  return initValue
 }
+
+Prim(acc, cond := "L") {
+  static keys := StrSplit("Ctrl Shift Alt", " ")
+  for key in keys
+    acc := WithKey(acc, Map(key, "{" key " Up}" acc "{" key " Down}"), cond)
+  return acc
+}
+
+GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
+  InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
 
 Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
@@ -406,7 +408,7 @@ for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
 #HotIf GetKeyState("Space", "P")
-g::$
+g::%
 *v::SendEvent(Prim("."))
 
 #HotIf
@@ -477,9 +479,9 @@ i::=
 *h::SendEvent(Prim("{^}"))
 j::+
 *k::SendEvent(Prim("-"))
-l::*
-*;::SendEvent(Prim("/"))
-vkBA::%
+l::$
+*;::*
+*vkBA::SendEvent(Prim("/"))
 
 n::_
 m::!
@@ -494,7 +496,7 @@ w::[
 *r::Arpeggio("]", "]{Left}", "w")
 
 a::#
-*s::SendEvent("{Blind}(")
+s::(
 *d::Arpeggio("'", "'{Left}")
 *f::Arpeggio(")", "){Left}", "s")
 g::&
@@ -516,11 +518,11 @@ l::Right
 `;::Browser_Home
 
 #SuspendExempt true
-*n::(Suspend(false) Mode.Into(false, "IME") SendEvent(Prim("{vkf2}{vkf3}")))
+*n::(Suspend(false) (Mode.Into(false, "IME") ? SendEvent(Prim("{vkf2}{vkf3}")) : ""))
 m::Home
 ,::End
-*.::Mode.Into(!Mode.IPA, "IPA")
-*/::(Suspend(-1) Mode.Into(Mode.IME, "IME"))
+*.::(Suspend(false) Mode.Into(!Mode.IPA, "IPA"))
+*/::(Suspend(-1) Mode.Into(false, "IPA"))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
@@ -528,15 +530,15 @@ m::Home
 *w::Click("WU")
 *e::Click("WD")
 
-*a::SendEvent(Prim(WithKey("!",, ["", "Space"]) "{PrintScreen}"))
+*a::SendEvent(Prim(WithKey("!", Map("Space", "")) "{PrintScreen}"))
 *s::Click("R")
 *d::Click
 *f::{
 	static Calender := Gui("+AlwaysOnTop -Caption")
-	Calender.AddMonthCal()
-	Calender.Show("NA")
   WinSetTransParent(255, Calender.Hwnd)
   Mode.SetFadeOut(Calender, 2000)
+	Calender.AddMonthCal()
+	Calender.Show("NA")
 	SendEvent("{F13}")
 }
 z::!F4
@@ -555,9 +557,9 @@ p::Volume_Up
 *k::
 *l:: {
 	MouseGetPos(&X, &Y)
-	diff := 16 * WithKey(1,, [1/4, "LCtrl"], [5, "LShift"])
-	X += diff * WithKey(0,, [1, "l"], [-1, "h"])
-	Y += diff * WithKey(0,, [1, "j"], [-1, "k"])
+	diff := 16 * WithKey(1, Map("LCtrl", 1/4, "LShift", 5))
+	X += diff * WithKey(0, Map("l", 1, "h", -1))
+	Y += diff * WithKey(0, Map("j", 1, "k", -1))
 	MouseMove(X, Y)
 }
 *`;::Lupine_Attack(GetKeyState("LShift", "P"))
@@ -607,15 +609,15 @@ m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 
 *a::Toggle("e", "{BS}ɛ")
 *s::Toggle("i", "{BS}ɪ")
-*d::Toggle(WithKey("a",, ["æ", "Ctrl"]), WithKey("{BS}ɑ",, ["", "Ctrl"]))
+*d::Toggle(WithKey("a", Map("Ctrl", "æ")), WithKey("{BS}ɑ", Map("Ctrl", "")))
 *f::Toggle("o", "{BS}ɔ")
-*g::Toggle(WithKey("ː",, ["ˈ", "Ctrl"]), WithKey(,, [Prim("{BS}ˌ"), "Ctrl"]))
+*g::Toggle(WithKey("ː", Map("Ctrl", "ˈ")), WithKey(, Map("Ctrl", Prim("{BS}ˌ"))))
 
 *c::Toggle("v", "{BS}ʌ")
 
-*u::Toggle(WithKey("r",, ["ɚ", "Ctrl"]), Prim("{BS}" WithKey("ɹ",, ["ɝ", "Ctrl"])))
-*o::Toggle(WithKey("h",, ["{BS}θ", "j"], ["{BS}ʃ", ";"], ["{BS}tʃ", "x"]),
-           WithKey("{BS}ɾ",, ["{BS}ð", "j"], ["", ";"], ["", "x"]))
+*u::Toggle(WithKey("r", Map("Ctrl", "ɚ")), Prim("{BS}") WithKey("ɹ", Map("Ctrl", "ɝ")))
+*o::Toggle(WithKey("h", Map("j", "{BS}θ", ";", "{BS}ʃ", "x", "{BS}tʃ")),
+           WithKey("{BS}ɾ", Map("j", "{BS}ð", ";", "", "x", "")))
 
 *l::Toggle("k", "{BS}ŋk", "k")
 *vkBA::Toggle("j", "{BS}ʒ")
