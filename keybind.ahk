@@ -450,9 +450,10 @@ vk1d & F24::
 Delete & F24::return
 *vk1d Up::(A_PriorKey = "") && SendEvent("{Blind}{Enter}")
 *vk1c Up::(A_PriorKey = "") && SendEvent("{Blind}{BackSpace}")
-*Delete Up::A_PriorKey = "Delete" && SendEvent(Mode.IME == true ? "{vk1c}" : "{Space}")
+*Delete Up::(A_PriorKey = "Delete") && (Mode.Into(true, "IME") SendEvent("{vk1c}"))
 *Space::(Mode.Into(true, "SandS") Layer("Shift", "{Space}") Mode.Into(false, "SandS"))
 
+#SuspendExempt false
 #HotIf GetKeyState("Space", "P") && GetKeyState("vk1c", "P")
 *q::~
 *w::SendEvent(Prim("1"))
@@ -486,7 +487,6 @@ m::!
 *.::SendEvent(Prim(":"))
 */::SendEvent(Prim(";"))
 
-#SuspendExempt false
 #HotIf GetKeyState("vk1c", "P")
 q::@
 w::[
@@ -513,18 +513,14 @@ h::Left
 j::Down
 k::Up
 l::Right
-`;::Home
-vkBA::End
+`;::Browser_Home
 
 #SuspendExempt true
-*n::
-*m::
-*,::
-*.::( Suspend(WithKey(false,, [-1, "."]))
-      Mode.Into(WithKey(false,, [!Mode.IPA, ","]), "IPA")
-      Mode.Into(WithKey(Mode.IME,, [false, "n"], [true, "m"]), "IME")
-      SendEvent(WithKey(,, [Prim("{vkf2}{vkf3}"), "n"], [Prim("{vkf2}"), "m"])))
-*/::Browser_Home
+*n::(Suspend(false) Mode.Into(false, "IME") SendEvent(Prim("{vkf2}{vkf3}")))
+m::Home
+,::End
+*.::Mode.Into(!Mode.IPA, "IPA")
+*/::(Suspend(-1) Mode.Into(Mode.IME, "IME"))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
