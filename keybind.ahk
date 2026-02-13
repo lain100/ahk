@@ -376,12 +376,16 @@ Layer(key := "", key2 := "", HotKey := GetHotKey()) {
   SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
 }
 
-Toggle(key := "", key2 := "", trg := "", cond := "P", HotKey := GetHotKey()) =>
-( SendEvent("{Blind}" WithKey(key, Map(trg, key2), cond))
-  trg || KeyWait(HotKey, "T0.2") ? "" : (SendEvent("{Blind}" key2) KeyWait(HotKey)))
+Toggle(key := "", key2 := "", time := 0.2, HotKey := GetHotKey()) =>
+  (SendEvent("{Blind}" key) (KeyWait(HotKey, "T" time) ? "" :
+  (SendEvent("{Blind}" key2) KeyWait(HotKey))))
 
-Arpeggio(key := "", key2 := "", trg := GetHotKey()) =>
-  SendEvent("{Blind}" (trg = GetHotKey(A_PriorHotKey) ? key2 : key))
+RecentKey(initValue := "", mapObj := Map()) {
+  for key, value in mapObj
+    if key && key = GetHotKey(A_PriorHotKey)
+      return value
+  return initValue
+}
 
 WithKey(initValue := "", mapObj := Map(), cond := "P") {
   for key, value in mapObj
@@ -422,7 +426,7 @@ d::a
 f::o
 g::-
 
-*LShift::Layer(GetHotKey() = GetHotKey(A_PriorHotKey) ? "LWin" : "Shift")
+*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin", "Space", "Alt")))
 z::x
 x::c
 c::v
@@ -436,7 +440,7 @@ p::w
 h::p
 j::t
 k::n
-*l::Toggle("k", "n", "k")
+*l::SendEvent(WithKey("k", Map("k", "n")))
 `;::s
 vkBA::j
 
@@ -473,7 +477,7 @@ Delete & F24::return
 
 u::<
 i::=
-*o::Arpeggio(">", Prim(">{Left}"), "u")
+*o::SendEvent(">" RecentKey(, Map("u", Prim("{Left}"))))
 *p::SendEvent(Prim("\"))
 
 *h::SendEvent(Prim("{^}"))
@@ -492,18 +496,18 @@ m::!
 #HotIf GetKeyState("vk1c", "P")
 q::@
 w::[
-*e::Arpeggio('"', '"{Left}')
-*r::Arpeggio("]", "]{Left}", "w")
+*e::SendEvent("`"" RecentKey(, Map("e", "{Left}")))
+*r::SendEvent("]" RecentKey(, Map("w", "{Left}")))
 
 a::#
 s::(
-*d::Arpeggio("'", "'{Left}")
-*f::Arpeggio(")", "){Left}", "s")
+*d::SendEvent("'" RecentKey(, Map("d", "{Left}")))
+*f::SendEvent(")" RecentKey(, Map("s", "{Left}")))
 g::&
 
 z::`{
-*x::Arpeggio("``", "``{Left}")
-*c::Arpeggio("{}}", "{}}{Left}", "z")
+*x::SendEvent("``" RecentKey(, Map("x", "{Left}")))
+*c::SendEvent("{}}" RecentKey(, Map("z", "{Left}")))
 v::|
 
 u::Esc
@@ -606,7 +610,6 @@ m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 *e::Toggle("u", "{BS}ʊ")
 
 *LControl::Layer("Ctrl", "ə")
-
 *a::Toggle("e", "{BS}ɛ")
 *s::Toggle("i", "{BS}ɪ")
 *d::Toggle(WithKey("a", Map("Ctrl", "æ")), WithKey("{BS}ɑ", Map("Ctrl", "")))
@@ -619,17 +622,17 @@ m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
 *o::Toggle(WithKey("h", Map("j", "{BS}θ", ";", "{BS}ʃ", "x", "{BS}tʃ")),
            WithKey("{BS}ɾ", Map("j", "{BS}ð", ";", "", "x", "")))
 
-*l::Toggle("k", "{BS}ŋk", "k")
+*l::SendEvent(WithKey("k", Map("k", "{BS}ŋk")))
 *vkBA::Toggle("j", "{BS}ʒ")
 
-*.::Toggle("g", "{BS}ŋ", "k")
+*.::SendEvent(WithKey("g", Map("k", "{BS}ŋ")))
 
 #HotIf WinActive("ahk_exe RPG_RT.exe") || WinActive("ahk_exe Game.exe")
+d::x
+f::z
 h::Left
 j::Down
 k::Up
 l::Right
-d::x
-f::z
 
 Tips("終わったよ", 800)
