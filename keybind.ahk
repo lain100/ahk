@@ -12,7 +12,7 @@ class Mode {
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
     this._Gui.BackColor := "202020"
-    this.Label := this._Gui.AddText("cFFFFFF x20 y20 w200 h80")
+    this.Label := this._Gui.AddText("cFFFFFF x20 y20 w120 h80 Center")
     this.Label.SetFont("s11", "Segoe UI")
     WinSetExStyle("+0x20", this._Gui.Hwnd)
   }
@@ -22,14 +22,10 @@ class Mode {
     this.%key% := value
     modifiers := Join(Filter(arr, key => this.%key%), " + ")
     modifiers := StrReplace(modifiers, "SandS" (this.Shift ? " + Shift" : ""), "Shift")
-    loop Floor((50 - StrLen(modifiers)) / 1.4) - 20
-      modifiers := " " modifiers
-    this.Label.Text := Join([
-      this.IME = -1  ?         "" : ("               " (this.IME ? "あ" : "A")),
-      modifiers,      "         " . (
-      A_isSuspended  ?  "SUSPEND" : (this.IPA ? "     IPA" : ""))], "`n")
+    this.Label.Text := Join([this.IME = -1 ? "" : (this.IME ? "あ" : "A"), modifiers,
+                    A_isSuspended  ?  "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
     WinSetTransParent(255, this._Gui.Hwnd)
-    this._Gui.Show("y200 w170 h100 NA")
+    this._Gui.Show("y200 w160 h100 NA")
     this.SetFadeOut(this._Gui)
     return value != oldValue
   }
