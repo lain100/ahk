@@ -6,7 +6,8 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static id := 0, IME := -1, SandS := false, IPA := false
+  static id := 0, IME := -1, SandS := false, IPA := false,
+  Shift := false, Alt := false, LWin := false, Ctrl := false
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -17,13 +18,18 @@ class Mode {
   }
 
   static Into(value, key, oldValue := this.%key%) {
+    static arr := StrSplit("SandS Shift Ctrl Alt LWin", " ")
     this.%key% := value
+    modifiers := Join(Filter(arr, key => this.%key%), " + ")
+    modifiers := StrReplace(modifiers, "SandS" (this.Shift ? " + Shift" : ""), "Shift")
+    loop Floor((50 - StrLen(modifiers)) / 1.4) - 20
+      modifiers := " " modifiers
     this.Label.Text := Join([
-      this.IME = -1  ?         "" : ("      " (this.IME ? "あ" : "A")),
-      this.SandS     ?  "  SHIFT" : "",
-      A_isSuspended  ?  "SUSPEND" : (this.IPA ? "     IPA" : "")], "`n")
+      this.IME = -1  ?         "" : ("               " (this.IME ? "あ" : "A")),
+      modifiers,      "         " . (
+      A_isSuspended  ?  "SUSPEND" : (this.IPA ? "     IPA" : ""))], "`n")
     WinSetTransParent(255, this._Gui.Hwnd)
-    this._Gui.Show("y200 w100 h100 NA")
+    this._Gui.Show("y200 w170 h100 NA")
     this.SetFadeOut(this._Gui)
     return value != oldValue
   }
@@ -417,13 +423,18 @@ w::l
 e::u
 r::f
 
+~*LCtrl::Mode.Into(true, "Ctrl")
+~*LCtrl Up::Mode.Into(false, "Ctrl")
 a::e
 s::i
 d::a
 f::o
 *g::SendEvent(WithKey("-", Map("Space", "%")))
 
-*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin"), 300))
+*LShift::{
+  layerKey := RecentKey("Shift", Map("LShift", "LWin"), 300)
+  Mode.Into(true, layerKey) Layer(layerKey) Mode.Into(false, layerKey)
+}
 z::x
 x::c
 c::v
@@ -486,12 +497,12 @@ m::!
 *s::SendEvent(WithKey("(", Map("Space", Prim("4"))))
 *d::SendEvent(WithKey("'" RecentKey(, Map("d", "{Left}")), Map("Space", Prim("5"))))
 *f::SendEvent(WithKey(")" RecentKey(, Map("s", "{Left}")), Map("Space", Prim("6"))))
-g::&
+*g::SendEvent(WithKey("&", Map("Space", "%")))
 
 *z::SendEvent(WithKey("{{}", Map("Space", Prim("7"))))
 *x::SendEvent(WithKey("``" RecentKey(, Map("x", "{Left}")), Map("Space", Prim("8"))))
 *c::SendEvent(WithKey("{}}" RecentKey(, Map("z", "{Left}")), Map("Space", Prim("9"))))
-v::|
+*v::SendEvent(WithKey("|", Map("Space", Prim("."))))
 
 u::Esc
 i::Tab
@@ -503,7 +514,7 @@ j::Down
 k::Up
 l::Right
 `;::Browser_Home
-*vkBA::Layer("Alt")
+*vkBA::(Mode.Into(true, "Alt") Layer("Alt") Mode.Into(false, "Alt"))
 
 #SuspendExempt true
 *n::(Suspend(false) Mode.Into(false, "IPA") (Mode.Into(false, "IME") ? SendEvent(Prim("{vkf2}{vkf4}")) : ""))
