@@ -7,7 +7,7 @@ ClipHistory.Init()
 
 class Mode {
   static id := 0, IME := -1, SandS := false, IPA := false,
-  Shift := false, Alt := false, LWin := false, Ctrl := false
+  Shift := false, Ctrl := false, Alt := false, LWin := false
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -34,11 +34,11 @@ class Mode {
     SetTimer((*) => this.FadeOut(_Gui, alpha, id), -time)
   }
 
-  static FadeOut(_Gui, alpha, id) {
+  static FadeOut(_Gui, a, id, alpha := Max(a - 10, 0)) {
     if id != this.id
       return
-    WinSetTransparent(alpha := Max(alpha - 10, 0), _Gui.Hwnd) 
-    Settimer((*) => alpha ? this.FadeOut(_Gui, alpha, id) : _Gui.Hide(), -15)
+    (alpha ? WinSetTransparent(alpha, _Gui.Hwnd) : _Gui.Hide())
+    Settimer((*) => this.FadeOut(_Gui, alpha, id), -15)
   }
 }
 
