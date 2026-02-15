@@ -23,22 +23,22 @@ class Mode {
     modifiers := Join(Filter(arr, key => this.%key%), " + ")
     modifiers := StrReplace(modifiers, "SandS" (this.Shift ? " + Shift" : ""), "Shift")
     this.Label.Text := Join([this.IME = -1 ? "" : (this.IME ? "あ" : "A"), modifiers,
-                    A_isSuspended  ?  "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
-    WinSetTransParent(255, this._Gui.Hwnd)
+                      A_isSuspended ? "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
+    WinSetTransParent(200, this._Gui.Hwnd)
     this._Gui.Show("y200 w160 h100 NA")
-    this.SetFadeOut(this._Gui)
+    this.SetFadeOut(this._Gui, 200)
     return value != oldValue
   }
 
-  static SetFadeOut(_Gui, time := 1000, id := ++this.id) {
-    SetTimer((*) => this.FadeOut(_Gui, id), -time)
+  static SetFadeOut(_Gui, alpha := 255, time := 1000, id := ++this.id) {
+    SetTimer((*) => this.FadeOut(_Gui, alpha, id), -time)
   }
 
-  static FadeOut(_Gui, id, alpha := 255) {
+  static FadeOut(_Gui, alpha, id) {
     if id != this.id
       return
     WinSetTransparent(alpha := Max(alpha - 10, 0), _Gui.Hwnd) 
-    Settimer((*) => alpha ? this.FadeOut(_Gui, id, alpha) : _Gui.Hide(), -15)
+    Settimer((*) => alpha ? this.FadeOut(_Gui, alpha, id) : _Gui.Hide(), -15)
   }
 }
 
@@ -532,7 +532,7 @@ m::Home
 *f::{
 	static Calender := Gui("+AlwaysOnTop -Caption")
   WinSetTransParent(255, Calender.Hwnd)
-  Mode.SetFadeOut(Calender, 2000)
+  Mode.SetFadeOut(Calender,, 2000)
 	Calender.AddMonthCal()
 	Calender.Show("NA")
 	SendEvent("{F13}")
@@ -588,7 +588,7 @@ p::Run("https://scrapbox.io/gakkaituiho/")
 h::Search("https://www.google.com/search?q=")
 j::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 k::Search("https://web.archive.org/web/")
-l::Run("https://typingch.c4on.jp/game/index.html")
+l::Run("https://www.e-typing.ne.jp/app/jsa_std/typing.asp?t=trysc.trysc.trysc.std.0&u=")
 `;::Run("https://keyx0.net/easy/")
 vkBA::Run("https://o24.works/atc/")
 
