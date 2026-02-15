@@ -188,14 +188,13 @@ InitListView(row, height) {
   ImgListID := DllCall("ImageList_Create" , "Int", 1, "Int", height,
                               "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  return Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, showEdit: showEdit, row: row,
-                     page: 1, range: 1, targetText: ""})
+  return Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, showEdit: showEdit, row: row})
 }
 
 ShowClipHistory() {
   static lv := InitListView(20, 18)
   try {
-    lv.filterEdit.Value := ""
+    Assign(lv, {page: 1, targetText: ""}).filterEdit.Value := ""
     ApplyFilter(lv)
     lv._Gui.Show()
     WinSetTransParent(200, lv._Gui.Hwnd)
@@ -257,20 +256,21 @@ ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 100) {
         ClipHistory.Modify(lv.targetText, newText)
         Tips((newText ? "保存" : "削除") "したよ")
       } else
-        ((A_Clipboard := newText) (targetRow := 1))
+        ((A_Clipboard := newText) (lv.page := 1) (targetRow := 1))
     } else if !ClipHistory.isChanged
       return
     ClipHistory.isChanged := false
+    lv.targetText := ""
     SetTimer((*) => ApplyFilter(lv, targetRow), -time)
   }
 }
 
 ApplyFilter(lv, targetRow := 1) {
   ClipHistory.ApplyFilter(lv.FilterEdit.Value)
-  len := ClipHistory.Filtered.Length
-  Assign(lv, {page: 1, range: Max(Ceil(len / lv.row), 1), targetText: ""})
+  lv.range := Max(Ceil(ClipHistory.Filtered.Length / lv.row), 1)
+  lv.page := Min(lv.page, lv.range)
   ShowFiltered(lv)
-  lv.Modify(Max(Min(targetRow, len), 1), "Focus Select")
+  lv.Modify(Max(Min(targetRow, LVGetLength(lv)), 1), "Focus Select")
   ShowFocusItem(lv)
 }
 
