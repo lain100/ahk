@@ -384,7 +384,7 @@ Toggle(key := "", key2 := "", time := 0.2, HotKey := GetHotKey()) =>
 
 RecentKey(initValue := "", mapObj := Map(), t := 0) {
   for key, value in mapObj
-    if key && key = GetHotKey(A_PriorHotKey) && (t ? A_TimeSinceThisHotkey <= t : true)
+    if key && key = GetHotKey(A_PriorHotKey) && (t ? A_TimeSincePriorHotkey <= t : 1)
       return value
   return initValue
 }
@@ -417,13 +417,13 @@ w::l
 e::u
 r::f
 
-*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin"), 300))
 a::e
 s::i
 d::a
 f::o
 *g::SendEvent(WithKey("-", Map("Space", "%")))
 
+*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin"), 300))
 z::x
 x::c
 c::v
