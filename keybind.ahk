@@ -1,5 +1,5 @@
-﻿#Requires AutoHotkey v2
-#SingleInstance force
+﻿#Requires AutoHotkey v2.0
+#SingleInstance Force
 OnClipboardChange ClipChanged
 
 Mode.Init()
@@ -85,14 +85,14 @@ class ClipHistory {
       this._ClipHistory[targetIndex][2] := newText
     } else
       this._ClipHistory.RemoveAt(targetIndex)
-    ClipHistoryCodes := StrSplit(FileRead(this.path), "`n", "`r")
-    for end, line in ClipHistoryCodes {
+    ClipHistoryEncodes := StrSplit(FileRead(this.path), "`n", "`r")
+    for end, line in ClipHistoryEncodes {
       if line
         continue
       if index = targetIndex {
-        ClipHistoryCodes.RemoveAt(start, end - start + 1)
-        newText ? ClipHistoryCodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
-        FileOpen(this.path, "w").Write(Join(ClipHistoryCodes, "`n"))
+        ClipHistoryEncodes.RemoveAt(start, end - start + 1)
+        newText ? ClipHistoryEncodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
+        FileOpen(this.path, "w").Write(Join(ClipHistoryEncodes, "`n"))
         return
       }
       index++
@@ -132,7 +132,7 @@ InitListView(row, height) {
     switch hwnd {
       case lv.Hwnd:
         switch wParam {
-          case 0x09: (viewEdit.Text := "") viewEdit.Focus()
+          case 0x09: (showEdit.Text := "") showEdit.Focus()
           case 0x0D: CopyToClipBoard(lv)
           case 0x26: if ChangeFocusItem(lv, -1)
                       return 0
@@ -143,7 +143,7 @@ InitListView(row, height) {
       case filterEdit.Hwnd:
         switch wParam {
           case 0x08: SendEvent(WithKey("{BS}", Map("Ctrl", "+^{Left}{BS}")))
-          case 0x09: (viewEdit.Text := "") viewEdit.Focus()
+          case 0x09: (showEdit.Text := "") showEdit.Focus()
           case 0x0D: CopyToClipBoard(lv)
           case 0x26: lv.Focus() ChangeFocusItem(lv, -1) ? "" : SendEvent("{Up}")
           case 0x28: lv.Focus() ChangeFocusItem(lv, 1) ? "" : SendEvent("{Down}")
@@ -165,24 +165,24 @@ InitListView(row, height) {
     if hCtrl == lv.Hwnd
       PageNext(lv, (wParam << 32 >> 48) > 0 ? -1 : 1)
   }
-  static _Gui, lv, filterEdit, viewEdit, theme := "cFFFFFF BackGround202020"
+  static _Gui, lv, filterEdit, showEdit, theme := "cFFFFFF BackGround202020"
   _Gui := Gui("+AlwaysOnTop -Caption")
   _Gui.BackColor := "202020"
-  _Gui.OnEvent("Escape", (*) => isFocused(viewEdit) ? filterEdit.Focus() : _Gui.Hide())
+  _Gui.OnEvent("Escape", (*) => isFocused(showEdit) ? filterEdit.Focus() : _Gui.Hide())
   filterEdit := _Gui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (*) => ApplyFilter(lv, lv.GetNext()))
   lv := _Gui.AddListView(theme " wp -Hdr -Tabstop h" 4 + 19 * row, [""])
   lv.OnEvent("ItemFocus", (*) => ShowFocusItem(lv))
   lv.OnEvent("DoubleClick", (*) => CopyToClipBoard(lv))
-  viewEdit := _Gui.AddEdit(theme " ym wp hp+42 -VScroll")
-  viewEdit.SetFont("s12", "Consolas")
-  viewEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
-  viewEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyTargetItem(lv, ctrl.Value))
+  showEdit := _Gui.AddEdit(theme " ym wp hp+42 -VScroll")
+  showEdit.SetFont("s12", "Consolas")
+  showEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
+  showEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyTargetItem(lv, ctrl.Value))
   ImgListID := DllCall("ImageList_Create" , "Int", 1, "Int", height,
                               "UInt", 0x18, "Int", 1, "Int", 1)
   SendMessage(0x1003, 1, ImgListID, lv.Hwnd, "ahk_id " lv.Gui.Hwnd)
-  return Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, viewEdit: viewEdit, row: row,
+  return Assign(lv, {_Gui: _Gui, filterEdit: filterEdit, showEdit: showEdit, row: row,
                      page: 1, range: 1, targetText: ""})
 }
 
@@ -196,7 +196,7 @@ ShowClipHistory() {
   } 
 }
 
-isFocused := (guiObj) => ControlGetFocus("A") = guiObj.Hwnd
+isFocused := (guiObj) => ControlGetFocus("A") == guiObj.Hwnd
 
 CopyToClipboard := (lv) => ((A_Clipboard := GetFocusItem(lv)) lv._Gui.Hide())
 
@@ -271,7 +271,7 @@ ApplyFilter(lv, targetRow := 1) {
 ShowFiltered(lv, end := ClipHistory.Filtered.Length - lv.row * (lv.page - 1)) {
   try {
     lv.Delete()
-    lv.viewEdit.Text := ""
+    lv.showEdit.Text := ""
     Filtered := Slice(ClipHistory.Filtered, Max(end - lv.row + 1, 1), end)
     Loop Filtered.Length
       lv.Add("", Filtered[Filtered.Length - A_Index + 1][2])
@@ -280,11 +280,13 @@ ShowFiltered(lv, end := ClipHistory.Filtered.Length - lv.row * (lv.page - 1)) {
 
 ShowFocusItem(lv) {
   try {
-    if ControlGetFocus("A") == lv.viewEdit.Hwnd
+    if isFocused(lv.showEdit)
       return
     item := ClipHistory.GetFocusItem(lv)
-    lv.viewEdit.Text := formatTime(item[1], "yyyy/MM/dd HH:mm:ss`r`n--`r`n")
-                      . StrReplace(item[2], "`n", "`r`n")
+    lv.showEdit.Text :=
+      "[" lv.row * (lv.page - 1) + lv.getNext() "/" ClipHistory.filtered.Length "] "
+      . formatTime(item[1], "yyyy/MM/dd HH:mm:ss") "`r`n--`r`n"
+      . StrReplace(item[2], "`n", "`r`n")
   }
 }
 
@@ -426,7 +428,7 @@ d::a
 f::o
 g::-
 
-*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin", "Space", "Alt")))
+*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin")))
 z::x
 x::c
 c::v
@@ -440,7 +442,7 @@ p::w
 h::p
 j::t
 k::n
-*l::SendEvent(WithKey("k", Map("k", "n")))
+*l::SendEvent("{Blind}" WithKey("k", Map("k", "n")))
 `;::s
 vkBA::j
 
@@ -496,7 +498,7 @@ m::!
 #HotIf GetKeyState("vk1c", "P")
 q::@
 w::[
-*e::SendEvent("`"" RecentKey(, Map("e", "{Left}")))
+*e::SendEvent('"' RecentKey(, Map("e", "{Left}")))
 *r::SendEvent("]" RecentKey(, Map("w", "{Left}")))
 
 a::#
@@ -520,9 +522,10 @@ j::Down
 k::Up
 l::Right
 `;::Browser_Home
+*vkBA::Layer("Alt")
 
 #SuspendExempt true
-*n::(Suspend(false) (Mode.Into(false, "IME") ? SendEvent(Prim("{vkf2}{vkf3}")) : ""))
+*n::(Suspend(false) Mode.Into(false, "IPA") (Mode.Into(false, "IME") ? SendEvent(Prim("{vkf2}{vkf4}")) : ""))
 m::Home
 ,::End
 *.::(Suspend(false) Mode.Into(!Mode.IPA, "IPA"))
@@ -533,6 +536,7 @@ m::Home
 *q::SendEvent("+{PrintScreen}")
 *w::Click("WU")
 *e::Click("WD")
+*r::SendEvent("#^+R")
 
 *a::SendEvent(Prim(WithKey("!", Map("Space", "")) "{PrintScreen}"))
 *s::Click("R")
