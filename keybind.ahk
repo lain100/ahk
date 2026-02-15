@@ -382,9 +382,9 @@ Toggle(key := "", key2 := "", time := 0.2, HotKey := GetHotKey()) =>
   (SendEvent("{Blind}" key) (KeyWait(HotKey, "T" time) ? "" :
   (SendEvent("{Blind}" key2) KeyWait(HotKey))))
 
-RecentKey(initValue := "", mapObj := Map()) {
+RecentKey(initValue := "", mapObj := Map(), t := 0) {
   for key, value in mapObj
-    if key && key = GetHotKey(A_PriorHotKey)
+    if key && key = GetHotKey(A_PriorHotKey) && (t ? A_TimeSinceThisHotkey <= t : true)
       return value
   return initValue
 }
@@ -413,26 +413,21 @@ Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab Lwin LAlt RAlt", " ")
   HotKey("*" key, (*) => "")
 
-#HotIf GetKeyState("Space", "P")
-g::%
-*v::SendEvent(Prim("."))
-
-#HotIf
 w::l
 e::u
 r::f
 
+*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin"), 300))
 a::e
 s::i
 d::a
 f::o
-g::-
+*g::SendEvent(WithKey("-", Map("Space", "%")))
 
-*LShift::Layer(RecentKey("Shift", Map("LShift", "LWin")))
 z::x
 x::c
 c::v
-v::,
+*v::SendEvent(WithKey(",", Map("Space", Prim("."))))
 
 u::r
 i::y
@@ -463,20 +458,6 @@ Delete & F24::return
 
 #SuspendExempt false
 #HotIf GetKeyState("Space", "P") && GetKeyState("vk1c", "P")
-*q::~
-*w::SendEvent(Prim("1"))
-*e::SendEvent(Prim("2"))
-*r::SendEvent(Prim("3"))
-
-*a::SendEvent(Prim("0"))
-*s::SendEvent(Prim("4"))
-*d::SendEvent(Prim("5"))
-*f::SendEvent(Prim("6"))
-
-*z::SendEvent(Prim("7"))
-*x::SendEvent(Prim("8"))
-*c::SendEvent(Prim("9"))
-
 u::<
 i::=
 *o::SendEvent(">" RecentKey(, Map("u", Prim("{Left}"))))
@@ -496,20 +477,20 @@ m::!
 */::SendEvent(Prim(";"))
 
 #HotIf GetKeyState("vk1c", "P")
-q::@
-w::[
-*e::SendEvent('"' RecentKey(, Map("e", "{Left}")))
-*r::SendEvent("]" RecentKey(, Map("w", "{Left}")))
+*q::SendEvent(WithKey("@", Map("Space", "~")))
+*w::SendEvent(WithKey("[", Map("Space", Prim("1"))))
+*e::SendEvent(WithKey('"' RecentKey(, Map("e", "{Left}")), Map("Space", Prim("2"))))
+*r::SendEvent(WithKey("]" RecentKey(, Map("w", "{Left}")), Map("Space", Prim("3"))))
 
-a::#
-s::(
-*d::SendEvent("'" RecentKey(, Map("d", "{Left}")))
-*f::SendEvent(")" RecentKey(, Map("s", "{Left}")))
+*a::SendEvent(WithKey("{#}", Map("Space", Prim("0"))))
+*s::SendEvent(WithKey("(", Map("Space", Prim("4"))))
+*d::SendEvent(WithKey("'" RecentKey(, Map("d", "{Left}")), Map("Space", Prim("5"))))
+*f::SendEvent(WithKey(")" RecentKey(, Map("s", "{Left}")), Map("Space", Prim("6"))))
 g::&
 
-z::`{
-*x::SendEvent("``" RecentKey(, Map("x", "{Left}")))
-*c::SendEvent("{}}" RecentKey(, Map("z", "{Left}")))
+*z::SendEvent(WithKey("{{}", Map("Space", Prim("7"))))
+*x::SendEvent(WithKey("``" RecentKey(, Map("x", "{Left}")), Map("Space", Prim("8"))))
+*c::SendEvent(WithKey("{}}" RecentKey(, Map("z", "{Left}")), Map("Space", Prim("9"))))
 v::|
 
 u::Esc
