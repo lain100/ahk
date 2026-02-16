@@ -17,17 +17,16 @@ class Mode {
     WinSetExStyle("+0x20", this._Gui.Hwnd)
   }
 
-  static Into(value, key, oldValue := this.%key%) {
+  static Into(key, value) {
     static arr := StrSplit("SandS Shift Ctrl Alt LWin", " ")
     this.%key% := value
     modifiers := Join(Filter(arr, key => this.%key%), " + ")
     modifiers := StrReplace(modifiers, "SandS" (this.Shift ? " + Shift" : ""), "Shift")
-    this.Label.Text := Join([this.IME = -1 ? "" : (this.IME ? "あ" : "A"), modifiers,
-                      A_isSuspended ? "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
+    this.Label.Text := Join([this.IME = -1 ? "" : (this.IME ? "あ" : "A"),
+           modifiers, A_isSuspended ? "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
     WinSetTransParent(200, this._Gui.Hwnd)
     this._Gui.Show("y200 w120 h100 NA")
     this.SetFadeOut(this._Gui, 200, modifiers ? 0 : 100)
-    return value != oldValue
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000, id := ++this.id) {
@@ -419,17 +418,15 @@ w::l
 e::u
 r::f
 
-~*LCtrl::(Mode.Into(true, "Ctrl") Layer() Mode.Into(false, "Ctrl"))
+~*LCtrl::(Mode.Into("Ctrl", true) Layer() Mode.Into("Ctrl", false))
 a::e
 s::i
 d::a
 f::o
 *g::SendEvent(WithKey("-", Map("Space", "%")))
 
-*LShift::{
-  layerKey := RecentKey("Shift", Map("LShift", "LWin"), 300)
-  Mode.Into(true, layerKey) Layer(layerKey) Mode.Into(false, layerKey)
-}
+*LShift::((layerKey := RecentKey("Shift", Map("LShift", "LWin"), 300))
+  Mode.Into(layerKey, true) Layer(layerKey) Mode.Into(layerKey, false))
 z::x
 x::c
 c::v
@@ -459,8 +456,8 @@ vk1d & F24::
 Delete & F24::return
 *vk1d Up::(A_PriorKey = "") && SendEvent("{Blind}{Enter}")
 *vk1c Up::(A_PriorKey = "") && SendEvent("{Blind}{BackSpace}")
-*Delete Up::(A_PriorKey = "Delete") && (Mode.Into(true, "IME") SendEvent("{vk1c}"))
-*Space::(Mode.Into(true, "SandS") Layer("Shift", "{Space}") Mode.Into(false, "SandS"))
+*Delete Up::(A_PriorKey = "Delete") && (Mode.Into("IME", true) SendEvent("{vk1c}"))
+*Space::(Mode.Into("SandS", true) Layer("Shift", "{Space}") Mode.Into("SandS", false))
 
 #SuspendExempt false
 #HotIf GetKeyState("Space", "P") && GetKeyState("vk1c", "P")
@@ -509,14 +506,15 @@ j::Down
 k::Up
 l::Right
 `;::Browser_Home
-*vkBA::(Mode.Into(true, "Alt") Layer("Alt") Mode.Into(false, "Alt"))
+*vkBA::(Mode.Into("Alt", true) Layer("Alt") Mode.Into("Alt", false))
 
 #SuspendExempt true
-*n::(Suspend(false) Mode.Into(false, "IPA") (Mode.Into(false, "IME") ? SendEvent(Prim("{vkf2}{vkf4}")) : ""))
+*n::((val := Mode.IME) Suspend(false) Mode.Into("IME", false) Mode.Into("IPA", false)
+    ((val != Mode.IME) ? SendEvent(Prim("{vkf2}{vkf4}")) : ""))
 m::Home
 ,::End
-*.::(Suspend(false) Mode.Into(!Mode.IPA, "IPA"))
-*/::(Suspend(-1) Mode.Into(false, "IPA"))
+*.::(Suspend(false) Mode.Into("IPA", !Mode.IPA))
+*/::(Suspend(-1) Mode.Into("IPA", false))
 
 #SuspendExempt false
 #HotIf GetKeyState("vk1d", "P")
