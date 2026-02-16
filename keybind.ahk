@@ -12,7 +12,7 @@ class Mode {
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
     this._Gui.BackColor := "202020"
-    this.Label := this._Gui.AddText("cFFFFFF x20 y20 w120 h80 Center")
+    this.Label := this._Gui.AddText("cFFFFFF x6 y20 w108 h80 Center")
     this.Label.SetFont("s11", "Segoe UI")
     WinSetExStyle("+0x20", this._Gui.Hwnd)
   }
@@ -25,12 +25,12 @@ class Mode {
     this.Label.Text := Join([this.IME = -1 ? "" : (this.IME ? "あ" : "A"), modifiers,
                       A_isSuspended ? "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
     WinSetTransParent(200, this._Gui.Hwnd)
-    this._Gui.Show("y200 w160 h100 NA")
-    this.SetFadeOut(this._Gui, 200)
+    this._Gui.Show("y200 w120 h100 NA")
+    this.SetFadeOut(this._Gui, 200, modifiers ? 0 : 100)
     return value != oldValue
   }
 
-  static SetFadeOut(_Gui, alpha := 255, time := 1000, id := ++this.id) {
+  static SetFadeOut(_Gui, alpha := 255, time := 2000, id := ++this.id) {
     SetTimer((*) => this.FadeOut(_Gui, alpha, id), -time)
   }
 
@@ -419,8 +419,7 @@ w::l
 e::u
 r::f
 
-~*LCtrl::Mode.Into(true, "Ctrl")
-~*LCtrl Up::Mode.Into(false, "Ctrl")
+~*LCtrl::(Mode.Into(true, "Ctrl") Layer() Mode.Into(false, "Ctrl"))
 a::e
 s::i
 d::a
@@ -532,7 +531,7 @@ m::Home
 *f::{
 	static Calender := Gui("+AlwaysOnTop -Caption")
   WinSetTransParent(255, Calender.Hwnd)
-  Mode.SetFadeOut(Calender,, 2000)
+  Mode.SetFadeOut(Calender)
 	Calender.AddMonthCal()
 	Calender.Show("NA")
 	SendEvent("{F13}")
