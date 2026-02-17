@@ -6,8 +6,8 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static room := [0, 0], IME := -1, SandS := false, IPA := false,
-  Shift := false, Ctrl := false, Alt := false, LWin := false
+  static IME := -1, SandS := false, IPA := false,
+     Shift := false, Ctrl := false, Alt := false, LWin := false
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -29,16 +29,18 @@ class Mode {
     this.SetFadeOut(this._Gui, 200, modifiers ? 0 : 100)
   }
 
-  static SetFadeOut(_Gui, alpha := 255, time := 2000, key := 1) {
-    your_id := ++this.room[key]
-    SetTimer((*) => this.FadeOut(_Gui, alpha, key, your_id), -time)
+  static SetFadeOut(_Gui, alpha := 255, time := 2000) {
+    try your_id := ++this.%_Gui.Hwnd%
+    catch
+        your_id :=  (this.%_Gui.Hwnd% := 0)
+    SetTimer((*) => this.FadeOut(_Gui, alpha, your_id), -time)
   }
 
-  static FadeOut(_Gui, a, key, my_id, alpha := Max(a - 10, 0)) {
-    if this.room[key] != my_id
+  static FadeOut(_Gui, al, my_id, alpha := Max(al - 10, 0)) {
+    if this.%_Gui.Hwnd% != my_id
       return
     (alpha ? WinSetTransparent(alpha, _Gui.Hwnd) : _Gui.Hide())
-    Settimer((*) => this.FadeOut(_Gui, alpha, key, my_id), -15)
+    Settimer((*) => this.FadeOut(_Gui, alpha, my_id), -15)
   }
 }
 
@@ -522,7 +524,7 @@ m::Home
 *q::SendEvent("+{PrintScreen}")
 *w::Click("WU")
 *e::Click("WD")
-*r::SendEvent("#^+R")
+*r::Click
 
 *a::SendEvent(Prim(WithKey("!", Map("Space", "")) "{PrintScreen}"))
 *s::Layer("Click R")
@@ -530,7 +532,7 @@ m::Home
 *f::{
 	static Calender := Gui("+AlwaysOnTop -Caption")
   WinSetTransParent(255, Calender.Hwnd)
-  Mode.SetFadeOut(Calender,,, 2)
+  Mode.SetFadeOut(Calender)
 	Calender.AddMonthCal()
 	Calender.Show("NA")
 	SendEvent("{F13}")
@@ -561,6 +563,8 @@ p::Volume_Up
 	try WinGetPos(&X, &Y, &W, &H, "A")
 	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
+
+*n::SendEvent("#^+R")
 
 #HotIf GetKeyState("Delete", "P")
 q::F11
