@@ -6,7 +6,7 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static id := 0, IME := -1, SandS := false, IPA := false,
+  static room := [0, 0], IME := -1, SandS := false, IPA := false,
   Shift := false, Ctrl := false, Alt := false, LWin := false
 
   static Init() {
@@ -29,15 +29,16 @@ class Mode {
     this.SetFadeOut(this._Gui, 200, modifiers ? 0 : 100)
   }
 
-  static SetFadeOut(_Gui, alpha := 255, time := 2000, id := ++this.id) {
-    SetTimer((*) => this.FadeOut(_Gui, alpha, id), -time)
+  static SetFadeOut(_Gui, alpha := 255, time := 2000, key := 1) {
+    your_id := ++this.room[key]
+    SetTimer((*) => this.FadeOut(_Gui, alpha, key, your_id), -time)
   }
 
-  static FadeOut(_Gui, a, id, alpha := Max(a - 10, 0)) {
-    if id != this.id
+  static FadeOut(_Gui, a, key, my_id, alpha := Max(a - 10, 0)) {
+    if this.room[key] != my_id
       return
     (alpha ? WinSetTransparent(alpha, _Gui.Hwnd) : _Gui.Hide())
-    Settimer((*) => this.FadeOut(_Gui, alpha, id), -15)
+    Settimer((*) => this.FadeOut(_Gui, alpha, key, my_id), -15)
   }
 }
 
@@ -362,7 +363,7 @@ CryptStringToBinary(str) {
 }
 
 Lupine_Attack(mode := 1) {
-  WinGetPos(&X, &Y, &W, &H, "A")
+  try WinGetPos(&X, &Y, &W, &H, "A")
   MouseGetPos(&offsetX, &offsetY)
   MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
   ◢ := (offsetY / MY + offsetX / MX) > 1
@@ -524,12 +525,12 @@ m::Home
 *r::SendEvent("#^+R")
 
 *a::SendEvent(Prim(WithKey("!", Map("Space", "")) "{PrintScreen}"))
-*s::Click("R")
-*d::Click
+*s::Layer("Click R")
+*d::Layer("Click")
 *f::{
 	static Calender := Gui("+AlwaysOnTop -Caption")
   WinSetTransParent(255, Calender.Hwnd)
-  Mode.SetFadeOut(Calender)
+  Mode.SetFadeOut(Calender,,, 2)
 	Calender.AddMonthCal()
 	Calender.Show("NA")
 	SendEvent("{F13}")
@@ -557,7 +558,7 @@ p::Volume_Up
 }
 *`;::Lupine_Attack(GetKeyState("LShift", "P"))
 *vkBA:: {
-	WinGetPos(&X, &Y, &W, &H, "A")
+	try WinGetPos(&X, &Y, &W, &H, "A")
 	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
 }
 
