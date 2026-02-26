@@ -6,7 +6,7 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static IPA := false, LShift := false, LCtrl := false, RAlt := false, LWin := false
+  static IPA := false, Modifiers := Map()
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -16,14 +16,14 @@ class Mode {
     WinSetExStyle("+0x20", this._Gui.Hwnd)
   }
 
-  static Into(key, value) {
-    static arr := StrSplit("LShift LCtrl RAlt LWin", " ")
-    this.%key% := value
-    mods := Join(Mapcar(Filter(arr, key => this.%key%), key => SubStr(key, 2)), " + ")
-    this.Label.Text := Join(["", mods, this.IPA ? "IPA" : ""], "`n")
+  static Into(key, value, mods := []) {
+    this.Modifiers[key] := value
+    for key, value in this.Modifiers
+      value ? mods.Push(LTrim(key, "LR")) : ""
+    this.Label.Text := Join(["", Join(mods, " + "), this.IPA ? "IPA" : ""], "`n")
     WinSetTransParent(200, this._Gui.Hwnd)
     this._Gui.Show("y200 w120 h100 NA")
-    this.SetFadeOut(this._Gui, 200, mods ? 0 : 100)
+    this.SetFadeOut(this._Gui, 200, mods.Length ? 0 : 100)
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000) {
