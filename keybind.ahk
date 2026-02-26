@@ -374,11 +374,8 @@ WithKey(initValue := "", mapObj := Map(), cond := "P") {
   return initValue
 }
 
-Toggle(key := "", key2 := "", time := 0.2, mod := GetHotKey()) =>
+Toggle(key := "", key2 := "", time := 0.3, mod := LTrim(A_ThisHotkey, "~+*``")) =>
   (SendEvent("{Blind}" key) (KeyWait(mod, "T" time) ? "" : SendEvent("{Blind}" key2)))
-
-GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
-  InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
 
 Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
@@ -434,5 +431,9 @@ vk1c::ə
 #HotIf WinActive("ahk_exe RPG_RT.exe") || WinActive("ahk_exe Game.exe")
 a::x
 o::z
+p::Left
+t::Down
+n::Up
+k::Right
 
 Tips("終わったよ", 800)
