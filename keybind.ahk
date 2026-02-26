@@ -6,8 +6,7 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static IME := -1, SandS := false, IPA := false,
-     Shift := false, Ctrl := false, Alt := false, LWin := false
+  static IPA := false, LShift := false, LCtrl := false, RAlt := false, LWin := false
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -18,15 +17,13 @@ class Mode {
   }
 
   static Into(key, value) {
-    static arr := StrSplit("SandS Shift Ctrl Alt LWin", " ")
+    static arr := StrSplit("LShift LCtrl RAlt LWin", " ")
     this.%key% := value
-    modifiers := Join(Filter(arr, key => this.%key%), " + ")
-    modifiers := StrReplace(modifiers, "SandS" (this.Shift ? " + Shift" : ""), "Shift")
-    this.Label.Text := Join([this.IME = -1 ? "" : (this.IME ? "あ" : "A"),
-           modifiers, A_isSuspended ? "SUSPEND" : (this.IPA ? "IPA" : "")], "`n")
+    mods := Join(Mapcar(Filter(arr, key => this.%key%), key => SubStr(key, 2)), " + ")
+    this.Label.Text := Join(["", mods, this.IPA ? "IPA" : ""], "`n")
     WinSetTransParent(200, this._Gui.Hwnd)
     this._Gui.Show("y200 w120 h100 NA")
-    this.SetFadeOut(this._Gui, 200, modifiers ? 0 : 100)
+    this.SetFadeOut(this._Gui, 200, mods ? 0 : 100)
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000) {
@@ -306,6 +303,12 @@ Filter(arr, fn, newArr := []) {
   return newArr
 }
 
+Mapcar(arr, fn, newArr := []) {
+  for item in arr
+    newArr.Push(fn(item))
+  return newArr
+}
+
 Some(arr, fn) {
   for item in arr
     if fn(item) == true
@@ -364,35 +367,6 @@ CryptStringToBinary(str) {
   return buf
 }
 
-Lupine_Attack(mode := 1) {
-  try WinGetPos(&X, &Y, &W, &H, "A")
-  MouseGetPos(&offsetX, &offsetY)
-  MX := Min(W, 1920 - X), MY := Min(H, 1080 - Y)
-  ◢ := (offsetY / MY + offsetX / MX) > 1
-  ◣ := (offsetY / MY - offsetX / MX) > 0
-  w1 := mode ? (◣ + !◣ / 2) : !◣ / 2
-  w2 := mode ?  ◣ / 2 : (!◣ +  ◣ / 2)
-  MouseMove((◢ ? w1 : w2) * MX, (◢ ? w2 : w1) * MY)
-  Tips("ルパインアタック", 300)
-}
-
-Layer(key := "", key2 := "", HotKey := GetHotKey()) {
-  SendEvent(key ? "{Blind}{" key " Down}" : "") KeyWait(HotKey)
-  SendEvent(key ? "{Blind}{" key " Up}"   : "")
-  SendEvent(key2 && A_PriorKey = HotKey ? "{Blind}" key2 : "")
-}
-
-Toggle(key := "", key2 := "", time := 0.2, HotKey := GetHotKey()) =>
-  (SendEvent("{Blind}" key) (KeyWait(HotKey, "T" time) ? "" :
-  (SendEvent("{Blind}" key2) KeyWait(HotKey))))
-
-RecentKey(initValue := "", mapObj := Map(), t := 0) {
-  for key, value in mapObj
-    if key && key = GetHotKey(A_PriorHotKey) && (t ? A_TimeSincePriorHotkey <= t : 1)
-      return value
-  return initValue
-}
-
 WithKey(initValue := "", mapObj := Map(), cond := "P") {
   for key, value in mapObj
     if key && GetKeystate(key, cond)
@@ -400,12 +374,8 @@ WithKey(initValue := "", mapObj := Map(), cond := "P") {
   return initValue
 }
 
-Prim(acc, cond := "L") {
-  static keys := StrSplit("Ctrl Shift Alt", " ")
-  for key in keys
-    acc := WithKey(acc, Map(key, "{" key " Up}" acc "{" key " Down}"), cond)
-  return acc
-}
+Toggle(key := "", key2 := "", time := 0.2, mod := GetHotKey()) =>
+  (SendEvent("{Blind}" key) (KeyWait(mod, "T" time) ? "" : SendEvent("{Blind}" key2)))
 
 GetHotKey(seed := A_ThisHotKey, HotKey := LTrim(seed, "~+*``")) =>
   InStr(HotKey, " up") ? SubStr(HotKey, 1, -3) : HotKey
@@ -414,219 +384,55 @@ Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-for key in StrSplit("- ^ \ t y @ [ ] b vke2 Esc Tab Lwin LAlt RAlt", " ")
-  HotKey("*" key, (*) => "")
+ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
 
-w::l
-e::u
-r::f
+for key in StrSplit("LCtrl LShift RAlt LWin", " ")
+  Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 
-~*LCtrl::(Mode.Into("Ctrl", true) Layer() Mode.Into("Ctrl", false))
-a::e
-s::i
-d::a
-f::o
-*g::SendEvent(WithKey("-", Map("Space", "%")))
-
-*LShift::((layerKey := RecentKey("Shift", Map("LShift", "LWin"), 300))
-  Mode.Into(layerKey, true) Layer(layerKey) Mode.Into(layerKey, false))
-z::x
-x::c
-c::v
-*v::SendEvent(WithKey(",", Map("Space", Prim("."))))
-
-u::r
-i::y
-o::h
-p::w
-
-h::p
-j::t
-k::n
-*l::SendEvent("{Blind}" WithKey("k", Map("k", "n")))
-`;::s
-vkBA::j
-
-n::b
-m::d
-,::m
-.::g
-/::z
-
-#SuspendExempt true
-vk1c & F24::
-vk1d & F24::
-Delete & F24::return
-*vk1d Up::(A_PriorKey = "") && SendEvent("{Blind}{Enter}")
-*vk1c Up::(A_PriorKey = "") && SendEvent("{Blind}{BackSpace}")
-*Delete Up::(A_PriorKey = "Delete") && (Mode.Into("IME", true) SendEvent("{vk1c}"))
-*Space::(Mode.Into("SandS", true) Layer("Shift", "{Space}") Mode.Into("SandS", false))
-
-#SuspendExempt false
-#HotIf GetKeyState("Space", "P") && GetKeyState("vk1c", "P")
-u::<
-i::=
-*o::SendEvent(">" RecentKey(, Map("u", Prim("{Left}"))))
-*p::SendEvent(Prim("\"))
-
-*h::SendEvent(Prim("{^}"))
-j::+
-*k::SendEvent(Prim("-"))
-l::$
-*;::*
-*vkBA::SendEvent(Prim("/"))
-
-n::_
-m::!
-,::?
-*.::SendEvent(Prim(":"))
-*/::SendEvent(Prim(";"))
-
-#HotIf GetKeyState("vk1c", "P")
-*q::SendEvent(WithKey("@", Map("Space", "~")))
-*w::SendEvent(WithKey("[", Map("Space", Prim("1"))))
-*e::SendEvent(WithKey('"' RecentKey(, Map("e", "{Left}")), Map("Space", Prim("2"))))
-*r::SendEvent(WithKey("]" RecentKey(, Map("w", "{Left}")), Map("Space", Prim("3"))))
-
-*a::SendEvent(WithKey("{#}", Map("Space", Prim("0"))))
-*s::SendEvent(WithKey("(", Map("Space", Prim("4"))))
-*d::SendEvent(WithKey("'" RecentKey(, Map("d", "{Left}")), Map("Space", Prim("5"))))
-*f::SendEvent(WithKey(")" RecentKey(, Map("s", "{Left}")), Map("Space", Prim("6"))))
-*g::SendEvent(WithKey("&", Map("Space", "%")))
-
-*z::SendEvent(WithKey("{{}", Map("Space", Prim("7"))))
-*x::SendEvent(WithKey("``" RecentKey(, Map("x", "{Left}")), Map("Space", Prim("8"))))
-*c::SendEvent(WithKey("{}}" RecentKey(, Map("z", "{Left}")), Map("Space", Prim("9"))))
-*v::SendEvent(WithKey("|", Map("Space", Prim("."))))
-
-u::Esc
-i::Tab
-o::Delete
-p::AppsKey
-
-h::Left
-j::Down
-k::Up
-l::Right
-`;::Browser_Home
-*vkBA::(Mode.Into("Alt", true) Layer("Alt") Mode.Into("Alt", false))
-
-#SuspendExempt true
-*n::((val := Mode.IME) Suspend(false) Mode.Into("IME", false) Mode.Into("IPA", false)
-    ((val != Mode.IME) ? SendEvent(Prim("{vkf2}{vkf4}")) : ""))
-m::Home
-,::End
-*.::(Suspend(false) Mode.Into("IPA", !Mode.IPA))
-*/::(Suspend(-1) Mode.Into("IPA", false))
-
-#SuspendExempt false
-#HotIf GetKeyState("vk1d", "P")
-*q::SendEvent("+{PrintScreen}")
-*w::Click("WU")
-*e::Click("WD")
-*r::Click
-
-*a::SendEvent(Prim(WithKey("!", Map("Space", "")) "{PrintScreen}"))
-*s::Layer("Click R")
-*d::Layer("Click")
-*f::{
+      PairWith := Map()
+    TargetKeys := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
+for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key) {
+  Hotkey(PairWith[key] := TargetKeys[index], (*) => false)
+  Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 300 ?
+              SendEvent("{Left}") : "")
+}
+~F13::{
 	static Calender := Gui("+AlwaysOnTop -Caption")
   WinSetTransParent(255, Calender.Hwnd)
   Mode.SetFadeOut(Calender)
 	Calender.AddMonthCal()
 	Calender.Show("NA")
-	SendEvent("{F13}")
 }
-z::!F4
-x::ShowClipHistory
-c::!Tab
-
-#SuspendExempt true
-u::Reload
-i::KeyHistory
-o::Volume_Down
-p::Volume_Up
-
-#SuspendExempt false
-*h::
-*j::
-*k::
-*l:: {
-	MouseGetPos(&X, &Y)
-	diff := 16 * WithKey(1, Map("LCtrl", 1/4, "LShift", 5))
-	X += diff * WithKey(0, Map("l", 1, "h", -1))
-	Y += diff * WithKey(0, Map("j", 1, "k", -1))
-	MouseMove(X, Y)
-}
-*`;::Lupine_Attack(GetKeyState("LShift", "P"))
-*vkBA:: {
-	try WinGetPos(&X, &Y, &W, &H, "A")
-	MouseMove(Min(W, 1920 - X) / 2, Min(H, 1080 - Y) / 2)
-}
-
-*n::SendEvent("#^+R")
-
-#HotIf GetKeyState("Delete", "P")
-q::F11
-w::F1
-e::F2
-r::F3
-
-a::F10
-s::F4
-d::F5
-f::F6
-g::F12
-
-z::F7
-x::F8
-c::F9
-
-u::Run("https://x.com/husino93/with_replies")
-i::Run("https://x.com/489wiki")
-o::Run("https://bsky.app/profile/489wiki.bsky.social")
-p::Run("https://scrapbox.io/gakkaituiho/")
-
-h::Search("https://www.google.com/search?q=")
-j::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
-k::Search("https://web.archive.org/web/")
-l::Run("https://www.e-typing.ne.jp/app/jsa_std/typing.asp?t=trysc.trysc.trysc.std.0&u=")
-`;::Run("https://keyx0.net/easy/")
-vkBA::Run("https://o24.works/atc/")
-
-n::Run("https://drive.google.com/drive/u/0/my-drive")
-m::Run("https://www.nct9.ne.jp/m_hiroi/clisp/index.html")
-,::Run("http://damachin.web.fc2.com/SRPG/yaminabe/yaminabe00.html")
-.::Run("https://jmh-tms2.azurewebsites.net/schoolsystem/")
+F14::Volume_Down
+F15::Volume_Up
+F16::Reload
+F17::KeyHistory
+F18::ShowClipHistory
+F20::Search("https://www.google.com/search?q=")
+F21::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+F22::Search("https://web.archive.org/web/")
+F23::Browser_Home
+F24::Mode.Into("IPA", !Mode.IPA)
+*k::SendEvent("{Blind}" WithKey("k", Map("n", "n")))
 
 #HotIf Mode.IPA
-*w::Toggle("l", "{BS}ɫ")
-*e::Toggle("u", "{BS}ʊ")
-
-*LControl::Layer("Ctrl", "ə")
-*a::Toggle("e", "{BS}ɛ")
-*s::Toggle("i", "{BS}ɪ")
-*d::Toggle(WithKey("a", Map("Ctrl", "æ")), WithKey("{BS}ɑ", Map("Ctrl", "")))
-*f::Toggle("o", "{BS}ɔ")
-*g::Toggle(WithKey("ː", Map("Ctrl", "ˈ")), WithKey(, Map("Ctrl", Prim("{BS}ˌ"))))
-
-*c::Toggle("v", "{BS}ʌ")
-
-*u::Toggle(WithKey("r", Map("Ctrl", "ɚ")), Prim("{BS}") WithKey("ɹ", Map("Ctrl", "ɝ")))
-*o::Toggle(WithKey("h", Map("j", "{BS}θ", ";", "{BS}ʃ", "x", "{BS}tʃ")),
-           WithKey("{BS}ɾ", Map("j", "{BS}ð", ";", "", "x", "")))
-
-*l::SendEvent(WithKey("k", Map("k", "{BS}ŋk")))
-*vkBA::Toggle("j", "{BS}ʒ")
-
-*.::SendEvent(WithKey("g", Map("k", "{BS}ŋ")))
+vk1c::ə
+*l::Toggle("l", "{BS}ɫ")
+*u::Toggle("u", "{BS}ʊ")
+*i::Toggle("i", "{BS}ɪ")
+*o::Toggle("o", "{BS}ɔ")
+*v::Toggle("v", "{BS}ʌ")
+*j::Toggle("j", "{BS}ʒ")
+*a::Toggle(WithKey("a", Map("e", "{BS}æ")), WithKey("{BS}ɑ", Map("e", "")))
+*-::Toggle(WithKey("ː", Map("e", "{BS}ˈ")), WithKey(, Map("e", "{BS}ˌ")))
+*r::Toggle(WithKey("r", Map("e", "{BS}ɚ")), "{BS}" WithKey("ɹ", Map("e", "ɝ")))
+*h::Toggle(WithKey("h", Map("t", "{BS}θ", "s", "{BS}ʃ", "c", "{BS}tʃ")),
+           WithKey("{BS}ɾ", Map("t", "{BS}ð", "s", "", "c", "")))
+~*k::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋk")))
+~*g::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋ")))
 
 #HotIf WinActive("ahk_exe RPG_RT.exe") || WinActive("ahk_exe Game.exe")
-d::x
-f::z
-h::Left
-j::Down
-k::Up
-l::Right
+a::x
+o::z
 
 Tips("終わったよ", 800)
