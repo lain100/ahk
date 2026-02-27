@@ -367,6 +367,14 @@ CryptStringToBinary(str) {
   return buf
 }
 
+ShowCalender() {
+	static Calender := Gui("+AlwaysOnTop -Caption")
+  WinSetTransParent(255, Calender.Hwnd)
+  Mode.SetFadeOut(Calender)
+	Calender.AddMonthCal()
+	Calender.Show("NA")
+}
+
 WithKey(initValue := "", mapObj := Map(), cond := "P") {
   for key, value in mapObj
     if key && GetKeystate(key, cond)
@@ -383,34 +391,28 @@ Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
 ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
 
-for key in StrSplit("LCtrl LShift RAlt LWin", " ")
+for key in StrSplit("LAlt LCtrl LShift RWin", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 
       PairWith := Map()
     TargetKeys := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
 for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key) {
   Hotkey(PairWith[key] := TargetKeys[index], (*) => "")
-  Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 300 ?
+  Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 500 ?
               SendEvent("{Left}") : "")
 }
-~F13::{
-	static Calender := Gui("+AlwaysOnTop -Caption")
-  WinSetTransParent(255, Calender.Hwnd)
-  Mode.SetFadeOut(Calender)
-	Calender.AddMonthCal()
-	Calender.Show("NA")
-}
+*k::SendEvent("{Blind}" WithKey("k", Map("n", "n")))
 F14::Volume_Down
 F15::Volume_Up
 F16::Reload
 F17::KeyHistory
 F18::ShowClipHistory
+F19::ShowCalender
 F20::Search("https://www.google.com/search?q=")
 F21::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 F22::Search("https://web.archive.org/web/")
 F23::Browser_Home
 F24::Mode.Into("IPA", !Mode.IPA)
-*k::SendEvent("{Blind}" WithKey("k", Map("n", "n")))
 
 #HotIf Mode.IPA
 vk1c::ə
