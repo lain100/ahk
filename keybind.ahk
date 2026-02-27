@@ -17,7 +17,7 @@ class Mode {
   }
 
   static Into(key, value, mods := []) {
-    this.Modifiers[key] := value
+    (key = "IPA" ? (this.IPA := value) : (this.Modifiers[key] := value))
     for key, value in this.Modifiers
       value ? mods.Push(LTrim(key, "LR")) : ""
     this.Label.Text := Join(["", Join(mods, " + "), this.IPA ? "IPA" : ""], "`n")
@@ -389,7 +389,7 @@ for key in StrSplit("LCtrl LShift RAlt LWin", " ")
       PairWith := Map()
     TargetKeys := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
 for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key) {
-  Hotkey(PairWith[key] := TargetKeys[index], (*) => false)
+  Hotkey(PairWith[key] := TargetKeys[index], (*) => "")
   Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 300 ?
               SendEvent("{Left}") : "")
 }
