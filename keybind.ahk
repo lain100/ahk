@@ -391,17 +391,16 @@ Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
 ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
 
-for key in StrSplit("LAlt LCtrl LShift RWin", " ")
+for key in StrSplit("LCtrl LShift LWin RAlt", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 
       PairWith := Map()
     TargetKeys := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
 for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key) {
   Hotkey(PairWith[key] := TargetKeys[index], (*) => "")
-  Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 500 ?
+  Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 1000 ?
               SendEvent("{Left}") : "")
 }
-*k::SendEvent("{Blind}" WithKey("k", Map("n", "n")))
 F14::Volume_Down
 F15::Volume_Up
 F16::Reload
@@ -413,6 +412,9 @@ F21::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 F22::Search("https://web.archive.org/web/")
 F23::Browser_Home
 F24::Mode.Into("IPA", !Mode.IPA)
+
+#HotIf GetKeyState("n", "P")
+k::n
 
 #HotIf Mode.IPA
 vk1c::ə
