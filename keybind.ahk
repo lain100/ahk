@@ -383,30 +383,27 @@ WithKey(initValue := "", mapObj := Map(), cond := "P") {
 }
 
 Toggle(key := "", key2 := "", time := 0.3, mod := LTrim(A_ThisHotkey, "~+*``")) =>
-  (SendEvent("{Blind}" key) (KeyWait(mod, "T" time) ? "" : SendEvent("{Blind}" key2)))
+  (SendEvent(key) (KeyWait(mod, "T" time) ? "" : SendEvent(key2)) KeyWait(mod))
+
+ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
 
 Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
-ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
-
+PairKeyWith    := Map()
+TargetPriorKey := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
+for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
+  ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
+    Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] ? SendEvent("{Left}") : ""))
 for key in StrSplit("LCtrl LShift LWin RAlt", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
-
-      PairWith := Map()
-    TargetKeys := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
-for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key) {
-  Hotkey(PairWith[key] := TargetKeys[index], (*) => "")
-  Hotkey(key, key => A_PriorHotkey = PairWith[key] && A_TimeSincePriorHotkey <= 1000 ?
-              SendEvent("{Left}") : "")
-}
 F14::Volume_Down
 F15::Volume_Up
 F16::Reload
 F17::KeyHistory
-F18::ShowClipHistory
-F19::ShowCalender
+F18::ShowCalender
+F19::ShowClipHistory
 F20::Search("https://www.google.com/search?q=")
 F21::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 F22::Search("https://web.archive.org/web/")
