@@ -81,7 +81,7 @@ class ClipHistory {
     targetIndex := this.IndexOf(targetText)
     if !targetIndex
       return
-    if newText {
+    if StrLen(newText) {
       time := this._ClipHistory[targetIndex][1]
       this._ClipHistory[targetIndex][2] := newText
     } else
@@ -92,7 +92,8 @@ class ClipHistory {
         continue
       if index = targetIndex {
         ClipHistoryEncodes.RemoveAt(start, end - start + 1)
-        newText ? ClipHistoryEncodes.InsertAt(start, time "|" Base64Encode(newText)) : ""
+        if StrLen(newText)
+          ClipHistoryEncodes.InsertAt(start, time "|" Base64Encode(newText))
         FileOpen(this.path, "w").Write(Join(ClipHistoryEncodes, "`n"))
         return
       }
@@ -246,7 +247,7 @@ GetFocusItem(lv) {
 ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 100) {
   try {
     if lv.targetText != newText {
-      if targetRow && lv.targetText {
+      if targetRow && StrLen(lv.targetText) {
         time := 1
         ClipHistory.Modify(lv.targetText, newText)
         Tips((newText ? "保存" : "削除") "したよ")
@@ -395,23 +396,21 @@ PairKeyWith    := Map()
 TargetPriorKey := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
 for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
   ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
-    Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] ? SendEvent("{Left}") : ""))
+    Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
+                        A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
 for key in StrSplit("LCtrl LShift LWin RAlt", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 F14::Volume_Down
 F15::Volume_Up
-F16::Reload
-F17::KeyHistory
+F16::Browser_Home
+F17::ShowClipHistory
 F18::ShowCalender
-F19::ShowClipHistory
-F20::Search("https://www.google.com/search?q=")
-F21::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
-F22::Search("https://web.archive.org/web/")
-F23::Browser_Home
+F19::Search("https://www.google.com/search?q=")
+F20::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
+F21::Search("https://web.archive.org/web/")
+F22::Reload
+F23::KeyHistory
 F24::Mode.Into("IPA", !Mode.IPA)
-
-#HotIf GetKeyState("n", "P")
-k::n
 
 #HotIf Mode.IPA
 vk1c::ə
@@ -428,6 +427,9 @@ vk1c::ə
            WithKey("{BS}ɾ", Map("t", "{BS}ð", "s", "", "c", "")))
 ~*k::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋk")))
 ~*g::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋ")))
+
+#HotIf GetKeyState("n", "P")
+k::n
 
 #HotIf WinActive("ahk_exe RPG_RT.exe") || WinActive("ahk_exe Game.exe")
 a::x
