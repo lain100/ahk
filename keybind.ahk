@@ -108,7 +108,7 @@ class ClipHistory {
 }
 
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
-  if type != 1
+  if !(type = 1 && StrLen(text))
     return
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
@@ -398,7 +398,7 @@ for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
   ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
     Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
                         A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
-for key in StrSplit("LCtrl LShift LWin RAlt", " ")
+for key in StrSplit("LCtrl LShift LWin RAlt RCtrl", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 F14::Volume_Down
 F15::Volume_Up
@@ -427,16 +427,5 @@ vk1c::ə
            WithKey("{BS}ɾ", Map("t", "{BS}ð", "s", "", "c", "")))
 ~*k::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋk")))
 ~*g::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋ")))
-
-#HotIf GetKeyState("n", "P")
-k::n
-
-#HotIf WinActive("ahk_exe RPG_RT.exe") || WinActive("ahk_exe Game.exe")
-a::x
-o::z
-p::Left
-t::Down
-n::Up
-k::Right
 
 Tips("終わったよ", 800)
