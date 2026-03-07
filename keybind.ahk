@@ -14,6 +14,7 @@ class Mode {
     this.Label := this._Gui.AddText("cFFFFFF x6 y20 w108 h80 Center")
     this.Label.SetFont("s11", "Segoe UI")
     WinSetExStyle("+0x20", this._Gui.Hwnd)
+    WinSetTransParent(160, this._Gui.Hwnd)
   }
 
   static Into(key, value, mods := []) {
@@ -21,9 +22,7 @@ class Mode {
     for key, value in this.Modifiers
       value ? mods.Push(LTrim(key, "LR")) : ""
     this.Label.Text := Join(["", Join(mods, " + "), this.IPA ? "IPA" : ""], "`n")
-    WinSetTransParent(200, this._Gui.Hwnd)
-    this._Gui.Show("y200 w120 h100 NA")
-    this.SetFadeOut(this._Gui, 200, mods.Length ? 0 : 100)
+    (mods.Length ? this._Gui.Show("y200 w120 h100 NA") : this._Gui.Hide())
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000) {
@@ -33,7 +32,7 @@ class Mode {
     SetTimer((*) => this.FadeOut(_Gui, alpha, your_id), -time)
   }
 
-  static FadeOut(_Gui, al, my_id, alpha := Max(al - 10, 0)) {
+  static FadeOut(_Gui, alp, my_id, alpha := Max(alp - 10, 0)) {
     if this.%_Gui.Hwnd% != my_id
       return
     (alpha ? WinSetTransparent(alpha, _Gui.Hwnd) : _Gui.Hide())
@@ -398,19 +397,19 @@ for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
   ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
     Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
                         A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
-for key in StrSplit("LCtrl LShift LWin RAlt RCtrl", " ")
+for key in StrSplit("LCtrl LShift LWin RAlt", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
-F14::Volume_Down
-F15::Volume_Up
-F16::Browser_Home
-F17::ShowClipHistory
-F18::ShowCalender
+F13::Mode.Into("IPA", !Mode.IPA)
+F14::Browser_Home
+F15::Volume_Down
+F16::Volume_Up
+F17::ShowCalender
+F18::ShowClipHistory
 F19::Search("https://www.google.com/search?q=")
 F20::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
 F21::Search("https://web.archive.org/web/")
 F22::Reload
 F23::KeyHistory
-F24::Mode.Into("IPA", !Mode.IPA)
 
 #HotIf Mode.IPA
 vk1c::ə
