@@ -109,10 +109,12 @@ class ClipHistory {
 ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
   if !(type = 1 && StrLen(text))
     return
+  oldLength := ClipHistory._ClipHistory.Length
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
   ClipHistory.FileAppend(time, text)
-  ClipHistory.isChanged := true
+  if ClipHistory._ClipHistory.Length != oldLength
+    ClipHistory.isChanged++
   Tips("コピーしたよ")
   static app := "Egaroucid_7_8_0_SIMD.exe", board := StrSplit("f5 f4 d3 g6", " ")
   switch {
@@ -243,6 +245,11 @@ GetFocusItem(lv) {
     return ""
 }
 
+ApplyChanged(lv, targetRow) {
+  ApplyFilter(lv, targetRow + ClipHistory.isChanged)
+  ClipHistory.isChanged := false
+}
+
 ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 100) {
   try {
     if lv.targetText != newText {
@@ -254,9 +261,8 @@ ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 100) {
         ((A_Clipboard := newText) (lv.page := 1) (targetRow := 1))
     } else if !ClipHistory.isChanged
       return
-    ClipHistory.isChanged := false
     lv.targetText := ""
-    SetTimer((*) => ApplyFilter(lv, targetRow), -time)
+    SetTimer((*) => ApplyChanged(lv, targetRow), -time)
   }
 }
 
