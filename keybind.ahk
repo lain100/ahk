@@ -6,7 +6,7 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static IPA := false, Modifiers := Map()
+  static Modifiers := Map(), IPA := false
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -22,7 +22,7 @@ class Mode {
     for key, value in this.Modifiers
       value ? mods.Push(LTrim(key, "LR")) : ""
     this.Label.Text := Join(["", Join(mods, " + "), this.IPA ? "IPA" : ""], "`n")
-    (mods.Length ? this._Gui.Show("y200 w120 h100 NA") : this._Gui.Hide())
+    (mods.Length || this.IPA ? this._Gui.Show("y200 w120 h100 NA") : this._Gui.Hide())
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000) {
@@ -41,7 +41,7 @@ class Mode {
 }
 
 class ClipHistory {
-  static _ClipHistory := [], Filtered := [], isChanged := false, path := "clip_history"
+  static _ClipHistory := [], Filtered := [], difFromCurRow := 0, path := "clip_history"
 
   static Init(acc := "") {
     for line in StrSplit(FileOpen(this.path, "rw").Read(), "`n", "`r") {
@@ -85,15 +85,15 @@ class ClipHistory {
       this._ClipHistory[targetIndex][2] := newText
     } else
       this._ClipHistory.RemoveAt(targetIndex)
-    ClipHistoryEncodes := StrSplit(FileRead(this.path), "`n", "`r")
-    for end, line in ClipHistoryEncodes {
+    Encoded := StrSplit(FileRead(this.path), "`n", "`r")
+    for end, line in Encoded {
       if line
         continue
       if index = targetIndex {
-        ClipHistoryEncodes.RemoveAt(start, end - start + 1)
+        Encoded.RemoveAt(start, end - start + 1)
         if StrLen(newText)
-          ClipHistoryEncodes.InsertAt(start, time "|" Base64Encode(newText))
-        FileOpen(this.path, "w").Write(Join(ClipHistoryEncodes, "`n"))
+          Encoded.InsertAt(start, time "|" Base64Encode(newText))
+        FileOpen(this.path, "w").Write(Join(Encoded, "`n"))
         return
       }
       index++
@@ -106,23 +106,19 @@ class ClipHistory {
   }
 }
 
-ClipChanged(type, time := DateAdd(A_NowUTC, 9, "Hours"), text := A_Clipboard) {
+ClipChanged(type, text := A_Clipboard) {
   if !(type = 1 && StrLen(text))
     return
+  time := DateAdd(A_NowUTC, 9, "Hours")
   oldLength := ClipHistory._ClipHistory.Length
   ClipHistory.Modify(text)
   ClipHistory.Push([time, text])
   ClipHistory.FileAppend(time, text)
   if ClipHistory._ClipHistory.Length != oldLength
-    ClipHistory.isChanged++
+    ClipHistory.difFromCurRow++
+  if Substr(text, 1, 8) = "https://" && InStr(text, "youtu")
+    try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
   Tips("コピーしたよ")
-  static app := "Egaroucid_7_8_0_SIMD.exe", board := StrSplit("f5 f4 d3 g6", " ")
-  switch {
-    case Substr(text, 1, 8) = "https://" && InStr(text, "youtu"):
-      try Run("C:\Program Files\MPC-BE\mpc-be64.exe /add " text)
-    case !WinExist("ahk_exe " app) && Always(board, pos => InStr(text, pos)):
-      try Run("C:\Program Files\Egaroucid_7_8_0\" app)
-  }
 }
 
 InitListView(row, height) {
@@ -168,17 +164,18 @@ InitListView(row, height) {
     if hCtrl == lv.Hwnd
       PageNext(lv, (wParam << 32 >> 48) > 0 ? -1 : 1)
   }
-  static _Gui, lv, filterEdit, showEdit, theme := "cFFFFFF BackGround202020"
+  static _Gui, lv, filterEdit, showEdit, theme := " cFFFFFF BackGround202020 "
   _Gui := Gui("+AlwaysOnTop -Caption")
   _Gui.BackColor := "202020"
   _Gui.OnEvent("Escape", (*) => isFocused(showEdit) ? filterEdit.Focus() : _Gui.Hide())
-  filterEdit := _Gui.AddEdit(theme " w750 h34 vFilter -Vscroll -WantReturn")
+  filterEdit := _Gui.AddEdit(theme "w750 h34 vFilter -Vscroll -Tabstop -WantReturn")
   filterEdit.SetFont("s12", "Segoe UI")
   filterEdit.OnEvent("Change", (*) => ApplyFilter(lv, lv.GetNext()))
-  lv := _Gui.AddListView(theme " wp -Hdr -Tabstop h" 4 + 19 * row, [""])
+  lv := _Gui.AddListView(theme "wp -Hdr h" 4 + 19 * row, [""])
+  lv.OnEvent("Focus", (*) => ShowFocusItem(lv))
   lv.OnEvent("ItemFocus", (*) => ShowFocusItem(lv))
   lv.OnEvent("DoubleClick", (*) => CopyToClipBoard(lv))
-  showEdit := _Gui.AddEdit(theme " ym wp hp+42 -VScroll")
+  showEdit := _Gui.AddEdit(theme "ym wp hp+42")
   showEdit.SetFont("s12", "Consolas")
   showEdit.OnEvent("Focus", (ctrl, *) => (Ctrl.Value := SetTargetText(lv)))
   showEdit.OnEvent("LoseFocus", (ctrl, *) => ModifyTargetItem(lv, ctrl.Value))
@@ -238,30 +235,27 @@ PageNext(lv, dir, targetRow := lv.GetNext()) {
 
 GetFocusItem(lv) {
   try {
-    if lv.GetNext() = 0
-      throw
-    return ClipHistory.GetFocusItem(lv)[2]
+    return lv.GetNext() == 0 ? "" : ClipHistory.GetFocusItem(lv)[2]
   } catch
     return ""
 }
 
 ApplyChanged(lv, targetRow) {
-  ApplyFilter(lv, targetRow + ClipHistory.isChanged)
-  ClipHistory.isChanged := false
+  ApplyFilter(lv, targetRow + ClipHistory.difFromCurRow)
+  ClipHistory.difFromCurRow := 0
 }
 
-ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 100) {
+ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 1) {
   try {
     if lv.targetText != newText {
       if targetRow && StrLen(lv.targetText) {
-        time := 1
         ClipHistory.Modify(lv.targetText, newText)
-        Tips((newText ? "保存" : "削除") "したよ")
+        lv.targetText := ""
+        Tips((StrLen(newText) ? "保存" : "削除") "したよ")
       } else
-        ((A_Clipboard := newText) (lv.page := 1) (targetRow := 1))
-    } else if !ClipHistory.isChanged
+        ((A_Clipboard := newText) (time := 100) ShowClipHistory())
+    } else if ClipHistory.difFromCurRow == 0
       return
-    lv.targetText := ""
     SetTimer((*) => ApplyChanged(lv, targetRow), -time)
   }
 }
@@ -388,8 +382,8 @@ WithKey(initValue := "", mapObj := Map(), cond := "P") {
   return initValue
 }
 
-Toggle(key := "", key2 := "", time := 0.3, mod := LTrim(A_ThisHotkey, "~+*``")) =>
-  (SendEvent(key) (KeyWait(mod, "T" time) ? "" : SendEvent(key2)) KeyWait(mod))
+Toggle(key := "", key2 := "", sec := 0.3, mod := LTrim(A_ThisHotkey, "~+*``")) =>
+( SendEvent(key) (KeyWait(mod, "T" sec) ? "" : SendEvent(key2)) KeyWait(mod))
 
 ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
 
@@ -400,9 +394,9 @@ Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 PairKeyWith    := Map()
 TargetPriorKey := Mapcar(StrSplit("+, +2 [ +7 +8 +@ +[", " "), key => "~*" key)
 for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
-  ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
-    Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
-                        A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
+( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
+  Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
+                      A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
 for key in StrSplit("LCtrl LShift LWin RAlt", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 F13::Mode.Into("IPA", !Mode.IPA)
