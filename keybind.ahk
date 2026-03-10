@@ -11,7 +11,7 @@ class Mode {
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
     this._Gui.BackColor := "202020"
-    this.Label := this._Gui.AddText("cFFFFFF x6 y20 w108 h80 Center")
+    this.Label := this._Gui.AddText("cFFFFFF x0 y0 w160 h21 Center")
     this.Label.SetFont("s11", "Segoe UI")
     WinSetExStyle("+0x20", this._Gui.Hwnd)
     WinSetTransParent(160, this._Gui.Hwnd)
@@ -21,8 +21,10 @@ class Mode {
     this.Modifiers[key] := value
     for key, value in this.Modifiers
       value ? mods.Push(LTrim(key, "LR")) : ""
-    this.Label.Text := "`n" Join(mods, " + ")
-    (mods.Length ? this._Gui.Show("y200 w120 h100 NA") : this._Gui.Hide())
+    if mods.Length == 0
+      return this._Gui.Hide()
+    this.Label.Text := Join(mods, " + ")
+    this._Gui.Show("y300 w160 h21 NA")
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000) {
