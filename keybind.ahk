@@ -6,7 +6,7 @@ Mode.Init()
 ClipHistory.Init()
 
 class Mode {
-  static Modifiers := Map(), IPA := false
+  static Modifiers := Map()
 
   static Init() {
     this._Gui := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -18,11 +18,11 @@ class Mode {
   }
 
   static Into(key, value, mods := []) {
-    (key = "IPA" ? (this.IPA := value) : (this.Modifiers[key] := value))
+    this.Modifiers[key] := value
     for key, value in this.Modifiers
       value ? mods.Push(LTrim(key, "LR")) : ""
-    this.Label.Text := Join(["", Join(mods, " + "), this.IPA ? "IPA" : ""], "`n")
-    (mods.Length || this.IPA ? this._Gui.Show("y200 w120 h100 NA") : this._Gui.Hide())
+    this.Label.Text := "`n" Join(mods, " + ")
+    (mods.Length ? this._Gui.Show("y200 w120 h100 NA") : this._Gui.Hide())
   }
 
   static SetFadeOut(_Gui, alpha := 255, time := 2000) {
@@ -141,7 +141,7 @@ InitListView(row, height) {
         }
       case filterEdit.Hwnd:
         switch wParam {
-          case 0x08: SendEvent(WithKey("{BS}", Map("Ctrl", "+^{Left}{BS}")))
+          case 0x08: SendEvent(GetKeyState("Ctrl", "P") ? "+^{Left}{BS}" : "{BS}")
           case 0x09: (showEdit.Text := "") showEdit.Focus()
           case 0x0D: CopyToClipBoard(lv)
           case 0x26: lv.Focus() ChangeFocusItem(lv, -1) ? "" : SendEvent("{Up}")
@@ -240,11 +240,6 @@ GetFocusItem(lv) {
     return ""
 }
 
-ApplyChanged(lv, targetRow) {
-  ApplyFilter(lv, targetRow + ClipHistory.difFromCurRow)
-  ClipHistory.difFromCurRow := 0
-}
-
 ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 1) {
   try {
     if lv.targetText != newText {
@@ -256,11 +251,12 @@ ModifyTargetItem(lv, newText := "", targetRow := lv.GetNext(), time := 1) {
         ((A_Clipboard := newText) (time := 100) ShowClipHistory())
     } else if ClipHistory.difFromCurRow == 0
       return
-    SetTimer((*) => ApplyChanged(lv, targetRow), -time)
+    SetTimer((*) => ApplyFilter(lv, targetRow + ClipHistory.difFromCurRow), -time)
   }
 }
 
 ApplyFilter(lv, targetRow := 1) {
+  ClipHistory.difFromCurRow := 0
   ClipHistory.ApplyFilter(lv.FilterEdit.Value)
   lv.range := Max(Ceil(ClipHistory.Filtered.Length / lv.row), 1)
   lv.page := Min(lv.page, lv.range)
@@ -369,25 +365,13 @@ CryptStringToBinary(str) {
 
 ShowCalender() {
 	static Calender := Gui("+AlwaysOnTop -Caption")
-  WinSetTransParent(255, Calender.Hwnd)
+  WinSetTransparent(255, Calender)
   Mode.SetFadeOut(Calender)
 	Calender.AddMonthCal()
 	Calender.Show("NA")
 }
 
-WithKey(initValue := "", mapObj := Map(), cond := "P") {
-  for key, value in mapObj
-    if key && GetKeystate(key, cond)
-      return value
-  return initValue
-}
-
-Toggle(key := "", key2 := "", sec := 0.3, mod := LTrim(A_ThisHotkey, "~+*``")) =>
-( SendEvent(key) (KeyWait(mod, "T" sec) ? "" : SendEvent(key2)) KeyWait(mod))
-
 ShowKey(key) => (Mode.Into(key, true) KeyWait(key) Mode.Into(key, false))
-
-Search(url) => (SendEvent("^{c}") Settimer((*) => Run(url A_Clipboard), -100))
 
 Tips(msg, delay := 1000) => (ToolTip(msg) SetTimer(ToolTip, -delay))
 
@@ -399,32 +383,13 @@ for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
                       A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
 for key in StrSplit("LCtrl LShift LWin RAlt", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
-F13::Mode.Into("IPA", !Mode.IPA)
-F14::Browser_Home
-F15::Volume_Down
-F16::Volume_Up
+F14::Volume_Down
+F15::Volume_Up
+F16::ShowClipHistory
 F17::ShowCalender
-F18::ShowClipHistory
-F19::Search("https://www.google.com/search?q=")
-F20::Search("https://translate.google.com/?sl=auto&tl=ja&text=")
-F21::Search("https://web.archive.org/web/")
-F22::Reload
-F23::KeyHistory
-
-#HotIf Mode.IPA
-vk1c::ə
-*l::Toggle("l", "{BS}ɫ")
-*u::Toggle("u", "{BS}ʊ")
-*i::Toggle("i", "{BS}ɪ")
-*o::Toggle("o", "{BS}ɔ")
-*v::Toggle("v", "{BS}ʌ")
-*j::Toggle("j", "{BS}ʒ")
-*a::Toggle(WithKey("a", Map("e", "{BS}æ")), WithKey("{BS}ɑ", Map("e", "")))
-*-::Toggle(WithKey("ː", Map("e", "{BS}ˈ")), WithKey(, Map("e", "{BS}ˌ")))
-*r::Toggle(WithKey("r", Map("e", "{BS}ɚ")), "{BS}" WithKey("ɹ", Map("e", "ɝ")))
-*h::Toggle(WithKey("h", Map("t", "{BS}θ", "s", "{BS}ʃ", "c", "{BS}tʃ")),
-           WithKey("{BS}ɾ", Map("t", "{BS}ð", "s", "", "c", "")))
-~*k::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋk")))
-~*g::SendEvent(WithKey(, Map("n", "{BS}{BS}ŋ")))
+F18::Browser_Home
+F19::Run("https://web.archive.org/web/" A_Clipboard)
+F20::Reload
+F21::KeyHistory
 
 Tips("終わったよ", 800)
