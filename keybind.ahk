@@ -27,18 +27,18 @@ class Mode {
     this._Gui.Show("y300 w160 h21 NA")
   }
 
-  static SetFadeOut(_Gui, alpha := 255, time := 2000) {
+  static SetFadeOut(_Gui, alpha := 255, time := 2000, delay := 10) {
     try your_id := ++this.%_Gui.Hwnd%
     catch
         your_id :=  (this.%_Gui.Hwnd% := 0)
-    SetTimer((*) => this.FadeOut(_Gui, alpha, your_id), -time)
+    SetTimer((*) => this.FadeOut(_Gui, alpha, delay, your_id), -time)
   }
 
-  static FadeOut(_Gui, alp, my_id, alpha := Max(alp - 10, 0)) {
+  static FadeOut(_Gui, alp, delay, my_id, alpha := Max(alp - 10, 0)) {
     if this.%_Gui.Hwnd% != my_id
       return
     (alpha ? WinSetTransparent(alpha, _Gui.Hwnd) : _Gui.Hide())
-    Settimer((*) => this.FadeOut(_Gui, alpha, my_id), -15)
+    Settimer((*) => this.FadeOut(_Gui, alpha, delay, my_id), -delay)
   }
 }
 
@@ -383,7 +383,7 @@ for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
 ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
   Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
                       A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
-for key in StrSplit("LCtrl LShift LWin RAlt", " ")
+for key in StrSplit("LAlt LCtrl LShift RWin", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
 F14::Volume_Down
 F15::Volume_Up
