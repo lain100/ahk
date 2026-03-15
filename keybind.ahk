@@ -188,7 +188,7 @@ InitListView(row, height) {
 }
 
 ShowClipHistory() {
-  static lv := InitListView(20, 18)
+  static lv := InitListView(50, 18)
   try {
     Assign(lv, {page: 1, targetText: ""}).filterEdit.Value := ""
     ApplyFilter(lv)
@@ -383,15 +383,11 @@ for index, key in Mapcar(StrSplit("+. +2 ] +7 +9 +@ +]", " "), key => "~*" key)
 ( Hotkey(PairKeyWith[key] := TargetPriorKey[index], (*) => "")
   Hotkey(key, key =>  A_PriorHotkey = PairKeyWith[key] &&
                       A_TimeSincePriorHotkey <= 1000 ? SendEvent("{Left}") : ""))
-for key in StrSplit("LAlt LCtrl LShift RWin", " ")
+for key in StrSplit("RAlt RCtrl RShift RWin", " ")
   Hotkey("~*" key, key => ShowKey(LTrim(key, "~*")))
-F14::Volume_Down
-F15::Volume_Up
-F16::ShowClipHistory
+F15::ShowClipHistory
 F17::ShowCalender
-F18::Browser_Home
+F18::Reload
 F19::Run("https://web.archive.org/web/" A_Clipboard)
-F20::Reload
-F21::KeyHistory
 
 Tips("終わったよ", 800)
